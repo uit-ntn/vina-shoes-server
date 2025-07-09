@@ -54,3 +54,14 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Project specific
+/src/generated
+/prisma/*.db
+/uploads
+/public/uploads
+
+# Environment variables
+.env
+.env.*
+!.env.example
