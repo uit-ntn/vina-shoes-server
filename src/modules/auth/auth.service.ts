@@ -24,7 +24,7 @@ export class AuthService {
     const hash = await bcrypt.hash(dto.password, 10);
     return this.userService.create({
       ...dto,
-      passwordHash: hash,
+      password: hash,
     });
   }
 
