@@ -4,6 +4,9 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
+// Add type declaration for HMR
+declare const module: NodeModule & { hot?: { accept: () => void; dispose: (cb: () => void) => void } };
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
@@ -54,6 +57,12 @@ async function bootstrap() {
   
   SwaggerModule.setup('api-docs', app, document, customOptions);
 
+  // Enable HMR
+  if (module.hot) {
+    module.hot.accept();
+    module.hot.dispose(() => app.close());
+  }
+  
   const port = process.env.PORT || 3000;
   await app.listen(port);
   console.log(`Application running on port ${port}`);
