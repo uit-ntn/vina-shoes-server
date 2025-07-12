@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Delete, Query, Param, Body, UseGuards, Request, NotFoundException, Post } from '@nestjs/common';
+import { Controller, Get, Put, Delete, Query, Param, Body, UseGuards, Request, NotFoundException, Post, Patch } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { UserService } from './user.service';
 import { ListUserRequestDto, ListUserResponseDto } from './dto/list-user.dto';
@@ -32,6 +32,12 @@ import {
   ApiCreatedResponse,
   getSchemaPath
 } from '@nestjs/swagger';
+import {
+  SoftDeleteUserResponseDto,
+  RestoreUserResponseDto
+} from './dto/soft-delete-user.dto';
+import { UpdateLastLoginResponseDto } from './dto/last-login.dto';
+import { FindDeletedUsersResponseDto } from './dto/find-deleted-users.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -161,4 +167,96 @@ export class UserController {
   ) {
     return this.userService.updateRole(id, dto);
   }
+
+  @ApiOperation({ summary: 'Update user by ID' })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiBody({ 
+    schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', example: 'Updated Name' },
+        email: { type: 'string', example: 'updated@example.com' }
+      }
+    }
+  })
+  @ApiOkResponse({
+    description: 'User updated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        user: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            name: { type: 'string' },
+            email: { type: 'string' },
+            role: { type: 'string' },
+            status: { type: 'string' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        message: { type: 'string', example: 'User updated successfully' }
+      }
+    }
+  })
+  @Put(':id')
+  async update(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserRequestDto
+  ) {
+    const user = await this.userService.update(id, updateUserDto);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return { 
+      user, 
+      message: 'User updated successfully' 
+    };
+  }
+
+  @ApiOperation({ summary: 'Find all soft-deleted users' })
+  @ApiOkResponse({
+    description: 'List of soft-deleted users',
+    type: FindDeletedUsersResponseDto
+  })
+  @Get('deleted')
+  async findDeleted() {
+    const users = await this.userService.findDeleted();
+    return { users };
+  }
+
+  @ApiOperation({ summary: 'Soft delete a user' })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiOkResponse({
+    description: 'User soft deleted',
+    type: SoftDeleteUserResponseDto
+  })
+  @Patch(':id/soft-delete')
+  async softDelete(@Param('id') id: string) {
+    return this.userService.softDelete(id);
+  }
+
+  @ApiOperation({ summary: 'Restore a soft-deleted user' })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiOkResponse({
+    description: 'User restored',
+    type: RestoreUserResponseDto
+  })
+  @Patch(':id/restore')
+  async restore(@Param('id') id: string) {
+    return this.userService.restore(id);
+  }
+
+  @ApiOperation({ summary: 'Update last login time' })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiOkResponse({
+    description: 'Last login time updated',
+    type: UpdateLastLoginResponseDto
+  })
+  @Patch(':id/last-login')
+  async updateLastLogin(@Param('id') id: string) {
+    return this.userService.updateLastLogin(id);
+  }
 }
+
