@@ -1,5 +1,15 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { 
+  ApiTags, 
+  ApiOperation, 
+  ApiResponse, 
+  ApiBearerAuth,
+  ApiParam,
+  ApiQuery,
+  ApiBody,
+  ApiOkResponse,
+  ApiCreatedResponse
+} from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { ProductService } from './product.service';
 import { 
@@ -26,31 +36,85 @@ export class ProductController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Create product' })
-  @ApiResponse({ status: 201, type: CreateProductResponseDto })
+  @ApiBody({ 
+    type: CreateProductRequestDto,
+    description: 'Product data to create'
+  })
+  @ApiCreatedResponse({
+    description: 'Product successfully created',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', example: '60d21b4667d0d8992e610c85' },
+        name: { type: 'string', example: 'Nike Air Max' },
+        slug: { type: 'string', example: 'nike-air-max' },
+        price: { type: 'number', example: 199.99 },
+        message: { type: 'string', example: 'Product created successfully' },
+        createdAt: { type: 'string', format: 'date-time' }
+      }
+    }
+  })
   create(@Body() dto: CreateProductRequestDto) {
     return this.productService.create(dto);
   }
 
   @Get()
   @ApiOperation({ summary: 'Get all products' })
-  @ApiResponse({ status: 200, type: ListProductResponseDto })
-  findAll(
-    @Query() query: ListProductRequestDto
-  ) {
+  @ApiQuery({ name: 'page', required: false, description: 'Page number', type: Number })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', type: Number })
+  @ApiQuery({ name: 'search', required: false, description: 'Search term', type: String })
+  @ApiOkResponse({
+    description: 'List of products returned',
+    schema: {
+      type: 'object',
+      properties: {
+        products: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              name: { type: 'string' },
+              slug: { type: 'string' },
+              price: { type: 'number' },
+              images: { type: 'array', items: { type: 'string' } },
+              brand: { type: 'string' },
+              inStock: { type: 'boolean' },
+              rating: { type: 'number' }
+            }
+          }
+        },
+        total: { type: 'number' },
+        page: { type: 'number' },
+        limit: { type: 'number' }
+      }
+    }
+  })
+  findAll(@Query() query: ListProductRequestDto) {
     const { page = 1, limit = 10, search } = query;
     return this.productService.findAll(page, limit, search);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get product by id' })
-  @ApiResponse({ status: 200, type: GetProductResponseDto })
+  @ApiParam({ name: 'id', description: 'Product ID' })
+  @ApiOkResponse({ 
+    description: 'Product details',
+    type: GetProductResponseDto 
+  })
   findOne(@Param('id') id: string) {
     return this.productService.findOne(id);
   }
 
   @Get('category/:categoryId')
   @ApiOperation({ summary: 'Get products by category' })
-  @ApiResponse({ status: 200, type: ListProductResponseDto })
+  @ApiParam({ name: 'categoryId', description: 'Category ID' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiOkResponse({ 
+    description: 'Products in category',
+    type: ListProductResponseDto 
+  })
   findByCategory(
     @Param('categoryId') categoryId: string,
     @Query() query: ListProductRequestDto
@@ -63,7 +127,12 @@ export class ProductController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Update product' })
-  @ApiResponse({ status: 200, type: UpdateProductResponseDto })
+  @ApiParam({ name: 'id', description: 'Product ID' })
+  @ApiBody({ type: UpdateProductRequestDto })
+  @ApiOkResponse({ 
+    description: 'Product successfully updated',
+    type: UpdateProductResponseDto 
+  })
   update(@Param('id') id: string, @Body() dto: UpdateProductRequestDto) {
     return this.productService.update(id, dto);
   }
@@ -72,7 +141,22 @@ export class ProductController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Update product stock status' })
-  @ApiResponse({ status: 200, type: UpdateProductResponseDto })
+  @ApiParam({ name: 'id', description: 'Product ID' })
+  @ApiBody({ 
+    schema: {
+      properties: {
+        inStock: { 
+          type: 'boolean',
+          example: true,
+          description: 'Stock availability status'
+        }
+      }
+    }
+  })
+  @ApiOkResponse({ 
+    description: 'Stock status updated',
+    type: UpdateProductResponseDto 
+  })
   updateStock(
     @Param('id') id: string,
     @Body('inStock') inStock: boolean
@@ -84,7 +168,22 @@ export class ProductController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Update product rating' })
-  @ApiResponse({ status: 200, type: UpdateProductResponseDto })
+  @ApiParam({ name: 'id', description: 'Product ID' })
+  @ApiBody({ 
+    schema: {
+      properties: {
+        rating: { 
+          type: 'number',
+          example: 4.5,
+          description: 'Product rating (0-5)'
+        }
+      }
+    }
+  })
+  @ApiOkResponse({ 
+    description: 'Rating updated',
+    type: UpdateProductResponseDto 
+  })
   updateRating(
     @Param('id') id: string,
     @Body('rating') rating: number
@@ -96,7 +195,11 @@ export class ProductController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Delete product' })
-  @ApiResponse({ status: 200, type: DeleteProductResponseDto })
+  @ApiParam({ name: 'id', description: 'Product ID' })
+  @ApiOkResponse({ 
+    description: 'Product successfully deleted',
+    type: DeleteProductResponseDto 
+  })
   remove(@Param('id') id: string) {
     return this.productService.remove(id);
   }

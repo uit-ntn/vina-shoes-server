@@ -1,5 +1,4 @@
 import { Controller, Get, Put, Delete, Query, Param, Body, UseGuards, Request, NotFoundException, Post } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { UserService } from './user.service';
 import { ListUserRequestDto, ListUserResponseDto } from './dto/list-user.dto';
@@ -21,6 +20,18 @@ import {
   CreateUserResponseDto
 } from './dto/create-user.dto';
 import { UserBaseDto } from './dto/user-base.dto';
+import { 
+  ApiTags, 
+  ApiOperation, 
+  ApiResponse, 
+  ApiBearerAuth, 
+  ApiQuery,
+  ApiParam,
+  ApiBody,
+  ApiOkResponse,
+  ApiCreatedResponse,
+  getSchemaPath
+} from '@nestjs/swagger';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -30,7 +41,37 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @ApiOperation({ summary: 'Get all users with pagination and filters' })
-  @ApiResponse({ status: 200, type: ListUserResponseDto })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number', type: Number })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', type: Number })
+  @ApiQuery({ name: 'search', required: false, description: 'Search term', type: String })
+  @ApiQuery({ name: 'status', required: false, enum: ['active', 'inactive', 'banned'], description: 'User status filter' })
+  @ApiOkResponse({
+    description: 'List of users',
+    schema: {
+      type: 'object',
+      properties: {
+        users: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+              email: { type: 'string' },
+              name: { type: 'string' },
+              role: { type: 'string', enum: ['admin', 'user'] },
+              status: { type: 'string', enum: ['active', 'inactive', 'banned'] },
+              createdAt: { type: 'string', format: 'date-time' },
+              updatedAt: { type: 'string', format: 'date-time' }
+            }
+          }
+        },
+        total: { type: 'number' },
+        page: { type: 'number' },
+        limit: { type: 'number' },
+        totalPages: { type: 'number' }
+      }
+    }
+  })
   @Get()
   findAll(@Query() query: ListUserRequestDto) {
     return this.userService.findAll(query);
@@ -100,7 +141,9 @@ export class UserController {
   }
 
   @ApiOperation({ summary: 'Update user status' })
-  @ApiResponse({ status: 200, type: UpdateUserStatusResponseDto })
+  @ApiParam({ name: 'id', description: 'User ID' })
+  @ApiBody({ type: UpdateUserStatusRequestDto })
+  @ApiOkResponse({ type: UpdateUserStatusResponseDto })
   @Put(':id/status')
   updateStatus(
     @Param('id') id: string,
@@ -108,7 +151,7 @@ export class UserController {
   ) {
     return this.userService.updateStatus(id, dto);
   }
-
+  
   @ApiOperation({ summary: 'Update user role' })
   @ApiResponse({ status: 200, type: UpdateUserRoleResponseDto })
   @Put(':id/role')
