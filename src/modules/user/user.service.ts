@@ -109,6 +109,75 @@ export class UserService {
     return { message: 'User deleted successfully' };
   }
 
+  async softDelete(id: string) {
+    const user = await this.userModel.findByIdAndUpdate(
+      id,
+      { 
+        deletedAt: new Date(),
+        status: UserStatus.INACTIVE 
+      },
+      { new: true }
+    ).exec();
+    
+    if (!user) throw new NotFoundException('User not found');
+    
+    return { message: 'User has been soft deleted' };
+  }
+
+  async restore(id: string) {
+    const user = await this.userModel.findByIdAndUpdate(
+      id,
+      { 
+        deletedAt: null,
+        status: UserStatus.ACTIVE 
+      },
+      { new: true }
+    ).exec();
+    
+    if (!user) throw new NotFoundException('User not found');
+    
+    return { 
+      message: 'User has been restored',
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email
+      }
+    };
+  }
+
+  async updateLastLogin(id: string) {
+    const user = await this.userModel.findByIdAndUpdate(
+      id,
+      { lastLoginAt: new Date() },
+      { new: true }
+    ).exec();
+    
+    if (!user) throw new NotFoundException('User not found');
+    
+    return { 
+      message: 'Last login time updated',
+      lastLoginAt: user.lastLoginAt
+    };
+  }
+
+  async findDeleted() {
+    return this.userModel.find({ 
+      deletedAt: { $ne: null } 
+    }).exec();
+  }
+
+  async countByStatus() {
+    return this.userModel.aggregate([
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      }
+    ]).exec();
+  }
+
   async getStats() {
     const [total, active, inactive, banned] = await Promise.all([
       this.userModel.countDocuments(),
