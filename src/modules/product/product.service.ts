@@ -16,25 +16,13 @@ export class ProductService {
     return product.save();
   }
 
-  async findAll(page: number, limit: number, search?: string) {
+  async findAll(search?: string) {
     const query = search 
       ? { name: new RegExp(search, 'i') }
       : {};
 
-    const [products, total] = await Promise.all([
-      this.productModel.find(query)
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .exec(),
-      this.productModel.countDocuments(query)
-    ]);
-
-    return {
-      products,
-      total,
-      page,
-      limit
-    };
+    const products = await this.productModel.find(query).exec();
+    return products;
   }
 
   async findOne(id: string): Promise<Product> {
