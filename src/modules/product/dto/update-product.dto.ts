@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsArray, IsBoolean, IsOptional } from 'class-validator';
+import { IsString, IsNumber, IsArray, IsBoolean, IsOptional, IsEnum } from 'class-validator';
+import { AgeGroup } from '../product.schema';
 
 export class UpdateProductRequestDto {
   @ApiProperty({ required: false })
@@ -17,15 +18,56 @@ export class UpdateProductRequestDto {
   @IsNumber()
   price?: number;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, type: [String] })
   @IsOptional()
   @IsArray()
+  @IsString({ each: true })
   images?: string[];
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsBoolean()
   inStock?: boolean;
+
+  @ApiProperty({ required: false, type: [Number] })
+  @IsOptional()
+  @IsArray()
+  @IsNumber({}, { each: true })
+  sizes?: number[];
+
+  @ApiProperty({ required: false, enum: AgeGroup })
+  @IsOptional()
+  @IsEnum(AgeGroup)
+  ageGroup?: AgeGroup;
+
+  @ApiProperty({ required: false, type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  categories?: string[];
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  isNewArrival?: boolean;
+
+  @ApiProperty({ required: false, type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  styleTags?: string[];
+
+  @ApiProperty({ required: false, type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
+
+  @ApiProperty({ required: false, type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  category?: string[];
 }
 
 export class UpdateProductResponseDto {
@@ -35,14 +77,22 @@ export class UpdateProductResponseDto {
   @ApiProperty()
   message: string;
 
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsArray()
-  sizes?: number[];
+  @ApiProperty({ type: [Number] })
+  sizes: number[];
 
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsBoolean()
-  inStock?: boolean;
+  @ApiProperty()
+  inStock: boolean;
+
+  @ApiProperty({ enum: AgeGroup })
+  ageGroup: AgeGroup;
+
+  @ApiProperty({ type: [String] })
+  categories: string[];
+
+  @ApiProperty()
+  isNewArrival: boolean;
+
+  @ApiProperty({ type: [String] })
+  category: string[];
 }
 

@@ -1,5 +1,11 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
+import { Document } from 'mongoose';
+
+export enum AgeGroup {
+  MEN = 'men',
+  WOMEN = 'women',
+  KIDS = 'kids'
+}
 
 @Schema({ timestamps: true })
 export class Product extends Document {
@@ -15,23 +21,38 @@ export class Product extends Document {
   @Prop({ required: true, type: Number })
   price: number;
 
-  @Prop({ type: [String] })
+  @Prop({ type: [String], default: [] })
   images: string[];
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Category' })
-  categoryId: string;
-
-  @Prop()
+  @Prop({ required: true })
   brand: string;
 
-  @Prop({ type: [Number] })
+  @Prop({ type: [Number], default: [] })
   sizes: number[];
 
   @Prop({ default: true })
   inStock: boolean;
 
-  @Prop({ type: Number, default: 0 })
+  @Prop({ type: Number, default: 0, min: 0, max: 5 })
   rating: number;
+
+  @Prop({ type: String, enum: AgeGroup, required: true })
+  ageGroup: AgeGroup;
+
+  @Prop({ type: [String], default: [] })
+  categories: string[];
+
+  @Prop({ default: false })
+  isNewArrival: boolean;
+
+  @Prop({ type: [String], default: [] })
+  styleTags: string[];
+
+  @Prop({ type: [String], default: [] })
+  tags: string[];
+
+  @Prop({ type: [String], default: [] })
+  category: string[];
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);

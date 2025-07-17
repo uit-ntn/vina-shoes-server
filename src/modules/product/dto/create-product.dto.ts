@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsArray, IsBoolean, IsOptional } from 'class-validator';
+import { IsString, IsNumber, IsArray, IsBoolean, IsOptional, IsEnum } from 'class-validator';
+import { AgeGroup } from '../product.schema';
 
 export class CreateProductRequestDto {
   @ApiProperty({ example: 'Nike Air Max' })
@@ -10,29 +11,57 @@ export class CreateProductRequestDto {
   @IsString()
   slug: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'Description for Nike Air Max' })
   @IsString()
   description: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 1110302 })
   @IsNumber()
   price: number;
 
-  @ApiProperty({ type: [String] })
+  @ApiProperty({ type: [String], example: ['https://example.com/product.jpg'] })
   @IsArray()
+  @IsString({ each: true })
   images: string[];
 
-  @ApiProperty()
-  @IsString()
-  categoryId: string;
-
-  @ApiProperty()
+  @ApiProperty({ example: 'Nike' })
   @IsString()
   brand: string;
 
-  @ApiProperty({ type: [Number] })
+  @ApiProperty({ type: [Number], example: [38, 39, 40, 41, 42] })
   @IsArray()
+  @IsNumber({}, { each: true })
   sizes: number[];
+
+  @ApiProperty({ enum: AgeGroup, example: AgeGroup.MEN })
+  @IsEnum(AgeGroup)
+  ageGroup: AgeGroup;
+
+  @ApiProperty({ type: [String], example: ['men', 'formal', 'sport'] })
+  @IsArray()
+  @IsString({ each: true })
+  categories: string[];
+
+  @ApiProperty({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  isNewArrival?: boolean;
+
+  @ApiProperty({ type: [String], example: ['formal', 'sport'] })
+  @IsArray()
+  @IsString({ each: true })
+  styleTags: string[];
+
+  @ApiProperty({ type: [String], example: ['lifestyle'] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
+
+  @ApiProperty({ type: [String], example: ['training'] })
+  @IsArray()
+  @IsString({ each: true })
+  category: string[];
 }
 
 export class CreateProductResponseDto {
