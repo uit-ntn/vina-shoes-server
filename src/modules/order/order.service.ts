@@ -5,6 +5,17 @@ import { Order, OrderStatus } from './order.schema';
 import { CreateOrderRequestDto } from './dto/create-order.dto';
 import { UpdateOrderStatusRequestDto } from './dto/update-order-status.dto';
 import { CartService } from '../cart/cart.service';
+import { CartItem } from '../cart/cart.schema';
+
+interface CartResponse {
+  id: string | null;
+  userId: string;
+  items: CartItem[];
+  totalAmount: number;
+  isActive: boolean;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+}
 
 @Injectable()
 export class OrderService {
@@ -15,7 +26,7 @@ export class OrderService {
 
   async create(userId: string, dto: CreateOrderRequestDto) {
     // Get cart items
-    const cart = await this.cartService.getUserCart(userId);
+    const cart = await this.cartService.getUserCart(userId) as CartResponse;
     
     if (!cart.items || cart.items.length === 0) {
       throw new BadRequestException('Cart is empty');
@@ -23,15 +34,15 @@ export class OrderService {
 
     // Calculate total amount
     const totalAmount = cart.items.reduce((total, item) => 
-      total + (item.product.price * item.quantity), 0);
+      total + (item.price * item.quantity), 0);
     
     // Create order with items from cart
     const orderItems = cart.items.map(item => ({
       productId: item.productId,
-      name: item.product.name,
-      image: item.product.images[0], // Use first image from images array
+      name: item.name,
+      image: item.image,
       size: item.size,
-      price: item.product.price,
+      price: item.price,
       quantity: item.quantity
     }));
 
