@@ -1,33 +1,66 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsEnum, ValidateNested } from 'class-validator';
+import { IsString, IsNumber, IsNotEmpty, ValidateNested, IsArray, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export class ShippingAddressDto {
-  @ApiProperty({ example: 'Street 46' })
+export class OrderItemDto {
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  street: string;
+  productId: string;
 
-  @ApiProperty({ example: 'HCM' })
+  @ApiProperty()
+  @IsNumber()
+  @Min(1)
+  quantity: number;
+
+  @ApiProperty()
+  @IsNumber()
+  @IsNotEmpty()
+  size: number;
+}
+
+export class ShippingAddressDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  fullName: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  phone: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  addressLine: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  ward: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  district: string;
+
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
   city: string;
-
-  @ApiProperty({ example: 'VN' })
-  @IsString()
-  @IsNotEmpty()
-  country: string;
-
-  @ApiProperty({ example: '700000' })
-  @IsString()
-  @IsNotEmpty()
-  postalCode: string;
 }
 
 export class CreateOrderRequestDto {
-  @ApiProperty({ example: 'credit_card', enum: ['credit_card', 'paypal', 'cod'] })
+  @ApiProperty({ type: [OrderItemDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => OrderItemDto)
+  items: OrderItemDto[];
+
+  @ApiProperty()
   @IsString()
-  @IsEnum(['credit_card', 'paypal', 'cod'])
+  @IsNotEmpty()
   paymentMethod: string;
 
   @ApiProperty({ type: ShippingAddressDto })
@@ -37,15 +70,15 @@ export class CreateOrderRequestDto {
 }
 
 export class CreateOrderResponseDto {
-  @ApiProperty({ example: '686e55be77dce804acca2546' })
+  @ApiProperty()
   id: string;
 
-  @ApiProperty({ example: 'pending' })
+  @ApiProperty()
   status: string;
 
-  @ApiProperty({ example: 2934938 })
-  total: number;
+  @ApiProperty()
+  totalAmount: number;
 
-  @ApiProperty({ example: 'Order created successfully' })
+  @ApiProperty()
   message: string;
 }

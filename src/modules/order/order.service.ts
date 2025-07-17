@@ -5,14 +5,12 @@ import { Order, OrderStatus } from './order.schema';
 import { CreateOrderRequestDto } from './dto/create-order.dto';
 import { UpdateOrderStatusRequestDto } from './dto/update-order-status.dto';
 import { CartService } from '../cart/cart.service';
-import { OrderItemService } from '../order-item/order-item.service';
 
 @Injectable()
 export class OrderService {
   constructor(
     @InjectModel(Order.name) private orderModel: Model<Order>,
-    private cartService: CartService,
-    private orderItemService: OrderItemService
+    private cartService: CartService
   ) {}
 
   async create(userId: string, dto: CreateOrderRequestDto) {
@@ -22,28 +20,33 @@ export class OrderService {
     if (!cart.items || cart.items.length === 0) {
       throw new BadRequestException('Cart is empty');
     }
+
+    // Calculate total amount
+    const totalAmount = cart.items.reduce((total, item) => 
+      total + (item.product.price * item.quantity), 0);
     
+    // Create order with items from cart
+    const orderItems = cart.items.map(item => ({
+      productId: item.productId,
+      name: item.product.name,
+      image: item.product.images[0], // Use first image from images array
+      size: item.size,
+      price: item.product.price,
+      quantity: item.quantity
+    }));
+
     // Create order
     const order = new this.orderModel({
       userId,
-      total: cart.totalPrice,
+      items: orderItems,
+      totalAmount,
       paymentMethod: dto.paymentMethod,
       shippingAddress: dto.shippingAddress,
-      status: OrderStatus.PENDING
+      status: OrderStatus.PENDING,
+      isPaid: false
     });
     
     const savedOrder = await order.save();
-    
-    // Create order items
-    const orderItems = cart.items.map(item => ({
-      orderId: savedOrder.id,
-      productId: item.productId,
-      size: item.size,
-      quantity: item.quantity,
-      price: item.product.price * item.quantity
-    }));
-    
-    await this.orderItemService.createMany(orderItems);
     
     // Clear cart
     await this.cartService.clearCart(userId);
@@ -51,7 +54,7 @@ export class OrderService {
     return {
       id: savedOrder.id,
       status: savedOrder.status,
-      total: savedOrder.total,
+      totalAmount: savedOrder.totalAmount,
       message: 'Order created successfully'
     };
   }
@@ -66,19 +69,17 @@ export class OrderService {
       this.orderModel.countDocuments({ userId })
     ]);
     
-    const ordersList = await Promise.all(orders.map(async order => {
-      const { items } = await this.orderItemService.findByOrderId(order.id);
-        
-      return {
-        id: order.id,
-        status: order.status,
-        total: order.total,
-        paymentMethod: order.paymentMethod,
-        shippingAddress: order.shippingAddress,
-        items,
-        createdAt: order.createdAt,
-        updatedAt: order.updatedAt
-      };
+    const ordersList = orders.map(order => ({
+      id: order.id,
+      status: order.status,
+      totalAmount: order.totalAmount,
+      paymentMethod: order.paymentMethod,
+      shippingAddress: order.shippingAddress,
+      items: order.items,
+      isPaid: order.isPaid,
+      paidAt: order.paidAt,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt
     }));
     
     return {
@@ -102,20 +103,18 @@ export class OrderService {
       this.orderModel.countDocuments(query)
     ]);
     
-    const ordersList = await Promise.all(orders.map(async order => {
-      const { items } = await this.orderItemService.findByOrderId(order.id);
-        
-      return {
-        id: order.id,
-        user: order.userId,
-        status: order.status,
-        total: order.total,
-        paymentMethod: order.paymentMethod,
-        shippingAddress: order.shippingAddress,
-        items,
-        createdAt: order.createdAt,
-        updatedAt: order.updatedAt
-      };
+    const ordersList = orders.map(order => ({
+      id: order.id,
+      user: order.userId,
+      status: order.status,
+      totalAmount: order.totalAmount,
+      paymentMethod: order.paymentMethod,
+      shippingAddress: order.shippingAddress,
+      items: order.items,
+      isPaid: order.isPaid,
+      paidAt: order.paidAt,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt
     }));
     
     return {
@@ -135,16 +134,16 @@ export class OrderService {
       throw new NotFoundException('Order not found');
     }
     
-    const { items } = await this.orderItemService.findByOrderId(order.id);
-      
     return {
       id: order.id,
       user: order.userId,
       status: order.status,
-      total: order.total,
+      totalAmount: order.totalAmount,
       paymentMethod: order.paymentMethod,
       shippingAddress: order.shippingAddress,
-      items,
+      items: order.items,
+      isPaid: order.isPaid,
+      paidAt: order.paidAt,
       createdAt: order.createdAt,
       updatedAt: order.updatedAt
     };
@@ -173,9 +172,6 @@ export class OrderService {
     if (!order) {
       throw new NotFoundException('Order not found');
     }
-    
-    // Remove associated order items
-    await this.orderItemService.removeByOrderId(id);
     
     return { message: 'Order deleted successfully' };
   }
