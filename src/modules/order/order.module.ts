@@ -4,15 +4,13 @@ import { OrderController } from './order.controller';
 import { OrderService } from './order.service';
 import { Order, OrderSchema } from './order.schema';
 import { CartModule } from '../cart/cart.module';
-import { OrderItemModule } from '../order-item/order-item.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Order.name, schema: OrderSchema }
     ]),
-    CartModule,
-    OrderItemModule
+    CartModule
   ],
   controllers: [OrderController],
   providers: [OrderService],

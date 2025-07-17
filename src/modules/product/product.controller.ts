@@ -1,16 +1,14 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
 import { 
   ApiTags, 
   ApiOperation, 
   ApiResponse, 
-  ApiBearerAuth,
   ApiParam,
   ApiQuery,
   ApiBody,
   ApiOkResponse,
   ApiCreatedResponse
 } from '@nestjs/swagger';
-import { AuthGuard } from '@nestjs/passport';
 import { ProductService } from './product.service';
 import { 
   CreateProductRequestDto,
@@ -33,8 +31,6 @@ export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
   @Post()
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Create product' })
   @ApiBody({ 
     type: CreateProductRequestDto,
@@ -60,39 +56,13 @@ export class ProductController {
 
   @Get()
   @ApiOperation({ summary: 'Get all products' })
-  @ApiQuery({ name: 'page', required: false, description: 'Page number', type: Number })
-  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', type: Number })
   @ApiQuery({ name: 'search', required: false, description: 'Search term', type: String })
   @ApiOkResponse({
     description: 'List of products returned',
-    schema: {
-      type: 'object',
-      properties: {
-        products: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              name: { type: 'string' },
-              slug: { type: 'string' },
-              price: { type: 'number' },
-              images: { type: 'array', items: { type: 'string' } },
-              brand: { type: 'string' },
-              inStock: { type: 'boolean' },
-              rating: { type: 'number' }
-            }
-          }
-        },
-        total: { type: 'number' },
-        page: { type: 'number' },
-        limit: { type: 'number' }
-      }
-    }
+    type: [GetProductResponseDto]
   })
-  findAll(@Query() query: ListProductRequestDto) {
-    const { page = 1, limit = 10, search } = query;
-    return this.productService.findAll(page, limit, search);
+  findAll(@Query('search') search?: string) {
+    return this.productService.findAll(search);
   }
 
   @Get(':id')
@@ -124,8 +94,6 @@ export class ProductController {
   }
 
   @Put(':id')
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Update product' })
   @ApiParam({ name: 'id', description: 'Product ID' })
   @ApiBody({ type: UpdateProductRequestDto })
@@ -138,8 +106,6 @@ export class ProductController {
   }
 
   @Put(':id/stock')
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Update product stock status' })
   @ApiParam({ name: 'id', description: 'Product ID' })
   @ApiBody({ 
@@ -165,8 +131,6 @@ export class ProductController {
   }
 
   @Put(':id/rating')
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Update product rating' })
   @ApiParam({ name: 'id', description: 'Product ID' })
   @ApiBody({ 
@@ -192,8 +156,6 @@ export class ProductController {
   }
 
   @Delete(':id')
-  @ApiBearerAuth()
-  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Delete product' })
   @ApiParam({ name: 'id', description: 'Product ID' })
   @ApiOkResponse({ 

@@ -1,67 +1,91 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { OrderStatus } from '../order.schema';
 
+export class OrderItemResponseDto {
+  @ApiProperty()
+  productId: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty()
+  image: string;
+
+  @ApiProperty()
+  size: number;
+
+  @ApiProperty()
+  price: number;
+
+  @ApiProperty()
+  quantity: number;
+}
+
+export class ShippingAddressResponseDto {
+  @ApiProperty()
+  fullName: string;
+
+  @ApiProperty()
+  phone: string;
+
+  @ApiProperty()
+  addressLine: string;
+
+  @ApiProperty()
+  ward: string;
+
+  @ApiProperty()
+  district: string;
+
+  @ApiProperty()
+  city: string;
+}
+
 export class OrderResponseDto {
-    @ApiProperty({ example: '686e55be77dce804acca2546' })
-    id: string;
+  @ApiProperty()
+  id: string;
 
-    @ApiProperty({ enum: OrderStatus, example: 'shipped' })
-    status: OrderStatus;
+  @ApiProperty()
+  userId: string;
 
-    @ApiProperty({ example: 2934938 })
-    total: number;
+  @ApiProperty({ type: [OrderItemResponseDto] })
+  items: OrderItemResponseDto[];
 
-    @ApiProperty({ example: 'credit_card' })
-    paymentMethod: string;
+  @ApiProperty()
+  totalAmount: number;
 
-    @ApiProperty({
-        example: {
-            street: 'Street 46',
-            city: 'HCM',
-            country: 'VN',
-            postalCode: '700000'
-        }
-    })
-    shippingAddress: {
-        street: string;
-        city: string;
-        country: string;
-        postalCode: string;
-    };
-    @ApiProperty({
-        example: [
-            {
-                productId: '1234567890abcdef',
-                name: 'Product Name',
-                quantity: 2,
-                price: 500000
-            }
-        ]
-    })
-    items: {
-        productId: string;
-        name: string;
-        quantity: number;
-        price: number;
-    }[];
+  @ApiProperty({ enum: OrderStatus })
+  status: OrderStatus;
 
-    @ApiProperty()
-    createdAt: Date;
+  @ApiProperty()
+  paymentMethod: string;
 
-    @ApiProperty()
-    updatedAt: Date;
+  @ApiProperty()
+  isPaid: boolean;
+
+  @ApiProperty({ type: Date, nullable: true })
+  paidAt: Date | null;
+
+  @ApiProperty({ type: ShippingAddressResponseDto })
+  shippingAddress: ShippingAddressResponseDto;
+
+  @ApiProperty()
+  createdAt: Date;
+
+  @ApiProperty()
+  updatedAt: Date;
 }
 
 export class OrdersResponseDto {
-    @ApiProperty({ type: [OrderResponseDto] })
-    orders: OrderResponseDto[];
+  @ApiProperty({ type: [OrderResponseDto] })
+  orders: OrderResponseDto[];
 
-    @ApiProperty({ example: 10 })
-    total: number;
+  @ApiProperty()
+  total: number;
 
-    @ApiProperty({ example: 1 })
-    page: number;
+  @ApiProperty()
+  page: number;
 
-    @ApiProperty({ example: 10 })
-    limit: number;
+  @ApiProperty()
+  limit: number;
 }

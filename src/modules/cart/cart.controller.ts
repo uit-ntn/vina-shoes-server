@@ -5,6 +5,9 @@ import { CartService } from './cart.service';
 import { AddCartItemRequestDto, AddCartItemResponseDto } from './dto/add-cart-item.dto';
 import { UpdateCartItemRequestDto, UpdateCartItemResponseDto } from './dto/update-cart-item.dto';
 import { GetCartResponseDto } from './dto/get-cart.dto';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { Role } from '../../common/enums/role.enum';
+import { RolesGuard } from '../../common/guards/roles.guard';
 
 @ApiTags('cart')
 @ApiBearerAuth()
@@ -13,7 +16,88 @@ import { GetCartResponseDto } from './dto/get-cart.dto';
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 
+  // Cart CRUD endpoints
   @Post()
+  @ApiOperation({ summary: 'Create new cart' })
+  @ApiCreatedResponse({ 
+    description: 'Cart created successfully',
+    type: GetCartResponseDto
+  })
+  async createCart(@Request() req) {
+    return this.cartService.createCart(req.user.userId);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Get active user cart' })
+  @ApiOkResponse({
+    description: 'User cart',
+    type: GetCartResponseDto
+  })
+  async getUserCart(@Request() req) {
+    return this.cartService.getUserCart(req.user.userId);
+  }
+
+  @Get('all')
+  @ApiOperation({ summary: 'Get all user carts' })
+  @ApiOkResponse({
+    description: 'All user carts',
+    type: [GetCartResponseDto]
+  })
+  async getAllUserCarts(@Request() req) {
+    return this.cartService.getAllUserCarts(req.user.userId);
+  }
+
+  @Get(':userId')
+  @Roles(Role.Admin)
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: 'Get cart by user ID (Admin only)' })
+  @ApiParam({ name: 'userId', description: 'User ID' })
+  @ApiOkResponse({
+    description: 'User cart',
+    type: GetCartResponseDto
+  })
+  async getCartByUserId(@Param('userId') userId: string) {
+    return this.cartService.getUserCart(userId);
+  }
+
+  @Put(':cartId/deactivate')
+  @ApiOperation({ summary: 'Deactivate cart' })
+  @ApiParam({ name: 'cartId', description: 'Cart ID' })
+  @ApiOkResponse({
+    description: 'Cart deactivated',
+    schema: {
+      properties: {
+        message: { type: 'string', example: 'Cart deactivated successfully' }
+      }
+    }
+  })
+  async deactivateCart(
+    @Request() req,
+    @Param('cartId') cartId: string
+  ) {
+    return this.cartService.deactivateCart(req.user.userId, cartId);
+  }
+
+  @Delete(':cartId')
+  @ApiOperation({ summary: 'Delete cart' })
+  @ApiParam({ name: 'cartId', description: 'Cart ID' })
+  @ApiOkResponse({
+    description: 'Cart deleted',
+    schema: {
+      properties: {
+        message: { type: 'string', example: 'Cart deleted successfully' }
+      }
+    }
+  })
+  async deleteCart(
+    @Request() req,
+    @Param('cartId') cartId: string
+  ) {
+    return this.cartService.deleteCart(req.user.userId, cartId);
+  }
+
+  // Cart Items endpoints
+  @Post('items')
   @ApiOperation({ summary: 'Add item to cart' })
   @ApiBody({ type: AddCartItemRequestDto })
   @ApiCreatedResponse({ 
@@ -24,19 +108,9 @@ export class CartController {
     return this.cartService.addItem(req.user.userId, dto);
   }
 
-  @Get()
-  @ApiOperation({ summary: 'Get user cart' })
-  @ApiOkResponse({
-    description: 'User cart items',
-    type: GetCartResponseDto
-  })
-  async getUserCart(@Request() req) {
-    return this.cartService.getUserCart(req.user.userId);
-  }
-
-  @Put(':id')
-  @ApiOperation({ summary: 'Update cart item' })
-  @ApiParam({ name: 'id', description: 'Cart item ID' })
+  @Put('items/:productId')
+  @ApiOperation({ summary: 'Update cart item quantity' })
+  @ApiParam({ name: 'productId', description: 'Product ID' })
   @ApiBody({ type: UpdateCartItemRequestDto })
   @ApiOkResponse({
     description: 'Cart item updated',
@@ -44,20 +118,15 @@ export class CartController {
   })
   async updateItem(
     @Request() req,
-    @Param('id') id: string,
+    @Param('productId') productId: string,
     @Body() dto: UpdateCartItemRequestDto
   ) {
-    await this.cartService.updateItem(req.user.userId, id, dto);
-    return {
-      id,
-      quantity: dto.quantity,
-      message: 'Cart item updated successfully'
-    };
+    return this.cartService.updateItem(req.user.userId, productId, dto);
   }
 
-  @Delete(':id')
+  @Delete('items/:productId')
   @ApiOperation({ summary: 'Remove item from cart' })
-  @ApiParam({ name: 'id', description: 'Cart item ID' })
+  @ApiParam({ name: 'productId', description: 'Product ID' })
   @ApiOkResponse({
     description: 'Item removed from cart',
     schema: {
@@ -66,11 +135,26 @@ export class CartController {
       }
     }
   })
-  async removeItem(@Request() req, @Param('id') id: string) {
-    return this.cartService.removeItem(req.user.userId, id);
+  async removeItem(@Request() req, @Param('productId') productId: string) {
+    return this.cartService.removeItem(req.user.userId, productId);
   }
 
-  @Delete()
+  @Post('items/:productId/restore')
+  @ApiOperation({ summary: 'Restore removed item to cart' })
+  @ApiParam({ name: 'productId', description: 'Product ID' })
+  @ApiOkResponse({
+    description: 'Item restored to cart',
+    schema: {
+      properties: {
+        message: { type: 'string', example: 'Item restored to cart' }
+      }
+    }
+  })
+  async restoreItem(@Request() req, @Param('productId') productId: string) {
+    return this.cartService.restoreItem(req.user.userId, productId);
+  }
+
+  @Delete('items')
   @ApiOperation({ summary: 'Clear cart' })
   @ApiOkResponse({
     description: 'Cart cleared',
