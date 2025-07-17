@@ -5,6 +5,9 @@ import { CartService } from './cart.service';
 import { AddCartItemRequestDto, AddCartItemResponseDto } from './dto/add-cart-item.dto';
 import { UpdateCartItemRequestDto, UpdateCartItemResponseDto } from './dto/update-cart-item.dto';
 import { GetCartResponseDto } from './dto/get-cart.dto';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { Role } from '../../common/enums/role.enum';
+import { RolesGuard } from '../../common/guards/roles.guard';
 
 @ApiTags('cart')
 @ApiBearerAuth()
@@ -42,6 +45,19 @@ export class CartController {
   })
   async getAllUserCarts(@Request() req) {
     return this.cartService.getAllUserCarts(req.user.userId);
+  }
+
+  @Get(':userId')
+  @Roles(Role.Admin)
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: 'Get cart by user ID (Admin only)' })
+  @ApiParam({ name: 'userId', description: 'User ID' })
+  @ApiOkResponse({
+    description: 'User cart',
+    type: GetCartResponseDto
+  })
+  async getCartByUserId(@Param('userId') userId: string) {
+    return this.cartService.getUserCart(userId);
   }
 
   @Put(':cartId/deactivate')
