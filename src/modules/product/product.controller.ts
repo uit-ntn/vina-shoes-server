@@ -130,31 +130,6 @@ export class ProductController {
     return this.productService.updateStock(id, inStock);
   }
 
-  @Put(':id/rating')
-  @ApiOperation({ summary: 'Update product rating' })
-  @ApiParam({ name: 'id', description: 'Product ID' })
-  @ApiBody({ 
-    schema: {
-      properties: {
-        rating: { 
-          type: 'number',
-          example: 4.5,
-          description: 'Product rating (0-5)'
-        }
-      }
-    }
-  })
-  @ApiOkResponse({ 
-    description: 'Rating updated',
-    type: UpdateProductResponseDto 
-  })
-  updateRating(
-    @Param('id') id: string,
-    @Body('rating') rating: number
-  ) {
-    return this.productService.updateRating(id, rating);
-  }
-
   @Delete(':id')
   @ApiOperation({ summary: 'Delete product' })
   @ApiParam({ name: 'id', description: 'Product ID' })
@@ -164,5 +139,52 @@ export class ProductController {
   })
   remove(@Param('id') id: string) {
     return this.productService.remove(id);
+  }
+
+  @Get('featured')
+  @ApiOperation({ summary: 'Get featured products' })
+  @ApiOkResponse({
+    description: 'Featured products returned successfully',
+    type: [GetProductResponseDto]
+  })
+  getFeaturedProducts() {
+    return this.productService.getFeaturedProducts();
+  }
+
+  @Get('new-arrivals')
+  @ApiOperation({ summary: 'Get new arrival products' })
+  @ApiOkResponse({
+    description: 'New arrival products returned successfully',
+    type: [GetProductResponseDto]
+  })
+  getNewArrivals() {
+    return this.productService.getNewArrivals();
+  }
+
+  @Get('best-sellers')
+  @ApiOperation({ summary: 'Get best selling products' })
+  @ApiOkResponse({
+    description: 'Best selling products returned successfully',
+    type: [GetProductResponseDto]
+  })
+  getBestSellers() {
+    return this.productService.getBestSellers();
+  }
+
+  @Get('brand/:brand')
+  @ApiOperation({ summary: 'Get products by brand' })
+  @ApiParam({ name: 'brand', description: 'Brand name' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiOkResponse({
+    description: 'Products by brand returned successfully',
+    type: ListProductResponseDto
+  })
+  getByBrand(
+    @Param('brand') brand: string,
+    @Query() query: ListProductRequestDto
+  ) {
+    const { page = 1, limit = 10 } = query;
+    return this.productService.getByBrand(brand, page, limit);
   }
 }
