@@ -70,11 +70,48 @@ export class ProductService {
     return product;
   }
 
-  async updateRating(id: string, rating: number): Promise<Product> {
-    const product = await this.productModel
-      .findByIdAndUpdate(id, { rating }, { new: true })
+  async getFeaturedProducts() {
+    // For now, we'll consider products with high ratings (>= 4.5) as featured
+    return this.productModel
+      .find({ rating: { $gte: 4.5 } })
+      .sort({ rating: -1 })
+      .limit(8)
       .exec();
-    if (!product) throw new NotFoundException('Product not found');
-    return product;
+  }
+
+  async getNewArrivals() {
+    return this.productModel
+      .find({ isNewArrival: true })
+      .sort({ createdAt: -1 })
+      .limit(8)
+      .exec();
+  }
+
+  async getBestSellers() {
+    // For now, returning highly rated products, but you might want to
+    // implement based on order statistics in the future
+    return this.productModel
+      .find({ rating: { $gte: 4.0 } })
+      .sort({ rating: -1 })
+      .limit(8)
+      .exec();
+  }
+
+  async getByBrand(brand: string, page: number, limit: number) {
+    const [products, total] = await Promise.all([
+      this.productModel
+        .find({ brand: new RegExp(brand, 'i') })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .exec(),
+      this.productModel.countDocuments({ brand: new RegExp(brand, 'i') })
+    ]);
+
+    return {
+      products,
+      total,
+      page,
+      limit
+    };
   }
 }

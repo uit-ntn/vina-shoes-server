@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { AgeGroup } from '../product.schema';
 
 export class ProductBaseDto {
   @ApiProperty()
@@ -13,7 +14,7 @@ export class ProductBaseDto {
   @ApiProperty()
   price: number;
 
-  @ApiProperty()
+  @ApiProperty({ type: [String] })
   images: string[];
 
   @ApiProperty()
@@ -24,4 +25,13 @@ export class ProductBaseDto {
 
   @ApiProperty()
   rating: number;
+
+  @ApiProperty({ enum: AgeGroup })
+  ageGroup: AgeGroup;
+
+  @ApiProperty()
+  isNewArrival: boolean;
+
+  @ApiProperty({ type: [String] })
+  category: string[];
 }
