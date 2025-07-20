@@ -70,69 +70,78 @@ export class OrderService {
     };
   }
 
-  async findAllByUser(userId: string, page: number = 1, limit: number = 10) {
-    const [orders, total] = await Promise.all([
-      this.orderModel.find({ userId })
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .exec(),
-      this.orderModel.countDocuments({ userId })
-    ]);
-    
-    const ordersList = orders.map(order => ({
-      id: order.id,
-      status: order.status,
-      totalAmount: order.totalAmount,
-      paymentMethod: order.paymentMethod,
-      shippingAddress: order.shippingAddress,
-      items: order.items,
-      isPaid: order.isPaid,
-      paidAt: order.paidAt,
-      createdAt: order.createdAt,
-      updatedAt: order.updatedAt
-    }));
+  async findAllByUser(userId: string) {
+    const orders = await this.orderModel.find({ userId })
+      .sort({ createdAt: -1 })
+      .exec();
     
     return {
-      orders: ordersList,
-      total,
-      page,
-      limit
+      orders: orders.map(order => ({
+        id: order.id,
+        status: order.status,
+        totalAmount: order.totalAmount,
+        paymentMethod: order.paymentMethod,
+        shippingAddress: order.shippingAddress,
+        items: order.items,
+        isPaid: order.isPaid,
+        paidAt: order.paidAt,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt
+      }))
     };
   }
 
-  async findAll(page: number = 1, limit: number = 10, status?: OrderStatus) {
+  async findAll(status?: OrderStatus) {
     const query = status ? { status } : {};
     
-    const [orders, total] = await Promise.all([
-      this.orderModel.find(query)
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .populate('userId', 'name email')
-        .exec(),
-      this.orderModel.countDocuments(query)
-    ]);
-    
-    const ordersList = orders.map(order => ({
-      id: order.id,
-      user: order.userId,
-      status: order.status,
-      totalAmount: order.totalAmount,
-      paymentMethod: order.paymentMethod,
-      shippingAddress: order.shippingAddress,
-      items: order.items,
-      isPaid: order.isPaid,
-      paidAt: order.paidAt,
-      createdAt: order.createdAt,
-      updatedAt: order.updatedAt
-    }));
+    const orders = await this.orderModel.find(query)
+      .sort({ createdAt: -1 })
+      .populate('userId', 'name email')
+      .exec();
     
     return {
-      orders: ordersList,
-      total,
-      page,
-      limit
+      orders: orders.map(order => ({
+        id: order.id,
+        user: order.userId,
+        status: order.status,
+        totalAmount: order.totalAmount,
+        paymentMethod: order.paymentMethod,
+        shippingAddress: order.shippingAddress,
+        items: order.items,
+        isPaid: order.isPaid,
+        paidAt: order.paidAt,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt
+      }))
+    };
+  }
+
+  async findByUserId(userId: string, status?: OrderStatus) {
+    const query = { userId, ...(status && { status }) };
+    
+    const orders = await this.orderModel.find(query)
+      .sort({ createdAt: -1 })
+      .populate('userId', 'name email')
+      .exec();
+
+    if (!orders.length) {
+      throw new NotFoundException('No orders found for this user');
+    }
+    
+    return {
+      orders: orders.map(order => ({
+        id: order.id,
+        user: order.userId,
+        status: order.status,
+        totalAmount: order.totalAmount,
+        paymentMethod: order.paymentMethod,
+        shippingAddress: order.shippingAddress,
+        items: order.items,
+        isPaid: order.isPaid,
+        paidAt: order.paidAt,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt
+      }))
     };
   }
 
@@ -163,7 +172,10 @@ export class OrderService {
   async updateStatus(id: string, dto: UpdateOrderStatusRequestDto) {
     const order = await this.orderModel.findByIdAndUpdate(
       id,
-      { status: dto.status },
+      { 
+        status: dto.status,
+        ...(dto.isPaid !== undefined && { isPaid: dto.isPaid })
+      },
       { new: true }
     ).exec();
     
@@ -174,6 +186,7 @@ export class OrderService {
     return {
       id: order.id,
       status: order.status,
+      isPaid: order.isPaid,
       message: 'Order status updated successfully'
     };
   }

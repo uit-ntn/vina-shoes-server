@@ -1,21 +1,28 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsNotEmpty } from 'class-validator';
+import { IsEnum, IsBoolean, IsOptional } from 'class-validator';
 import { OrderStatus } from '../order.schema';
 
 export class UpdateOrderStatusRequestDto {
-  @ApiProperty({ enum: OrderStatus, example: OrderStatus.PROCESSING })
-  @IsNotEmpty()
+  @ApiProperty({ enum: OrderStatus })
   @IsEnum(OrderStatus)
   status: OrderStatus;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  isPaid?: boolean;
 }
 
 export class UpdateOrderStatusResponseDto {
-  @ApiProperty({ example: '686e557677dce804acca24e2' })
+  @ApiProperty()
   id: string;
 
-  @ApiProperty({ enum: OrderStatus, example: OrderStatus.PROCESSING })
+  @ApiProperty({ enum: OrderStatus })
   status: OrderStatus;
 
-  @ApiProperty({ example: 'Order status updated successfully' })
+  @ApiProperty()
+  isPaid: boolean;
+
+  @ApiProperty()
   message: string;
 }
