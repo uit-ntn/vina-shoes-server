@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { OrderStatus } from '../order.schema';
+import { IsOptional, IsEnum, IsString, IsNotEmpty } from 'class-validator';
 
 export class OrderItemResponseDto {
   @ApiProperty()
@@ -41,33 +42,44 @@ export class ShippingAddressResponseDto {
   city: string;
 }
 
-export class OrderResponseDto {
+export class UserResponseDto {
   @ApiProperty()
   id: string;
 
   @ApiProperty()
-  userId: string;
-
-  @ApiProperty({ type: [OrderItemResponseDto] })
-  items: OrderItemResponseDto[];
+  name: string;
 
   @ApiProperty()
-  totalAmount: number;
+  email: string;
+}
+
+export class OrderResponseDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty({ type: UserResponseDto })
+  user: UserResponseDto;
 
   @ApiProperty({ enum: OrderStatus })
   status: OrderStatus;
 
   @ApiProperty()
+  totalAmount: number;
+
+  @ApiProperty()
   paymentMethod: string;
+
+  @ApiProperty({ type: ShippingAddressResponseDto })
+  shippingAddress: ShippingAddressResponseDto;
+
+  @ApiProperty({ type: [OrderItemResponseDto] })
+  items: OrderItemResponseDto[];
 
   @ApiProperty()
   isPaid: boolean;
 
-  @ApiProperty({ type: Date, nullable: true })
-  paidAt: Date | null;
-
-  @ApiProperty({ type: ShippingAddressResponseDto })
-  shippingAddress: ShippingAddressResponseDto;
+  @ApiProperty()
+  paidAt: Date;
 
   @ApiProperty()
   createdAt: Date;
@@ -76,16 +88,46 @@ export class OrderResponseDto {
   updatedAt: Date;
 }
 
-export class OrdersResponseDto {
+export class GetOrdersQueryDto {
+  @ApiProperty({ required: false, enum: OrderStatus })
+  @IsOptional()
+  @IsEnum(OrderStatus)
+  status?: OrderStatus;
+}
+
+export class GetOrdersByUserIdDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  userId: string;
+
+  @ApiProperty({ required: false, enum: OrderStatus })
+  @IsOptional()
+  @IsEnum(OrderStatus)
+  status?: OrderStatus;
+}
+
+export class OrdersListResponseDto {
   @ApiProperty({ type: [OrderResponseDto] })
   orders: OrderResponseDto[];
+}
+
+export class OrderStatsResponseDto {
+  @ApiProperty()
+  totalOrders: number;
 
   @ApiProperty()
-  total: number;
+  pendingOrders: number;
 
   @ApiProperty()
-  page: number;
+  processingOrders: number;
 
   @ApiProperty()
-  limit: number;
+  shippedOrders: number;
+
+  @ApiProperty()
+  deliveredOrders: number;
+
+  @ApiProperty()
+  cancelledOrders: number;
 }
