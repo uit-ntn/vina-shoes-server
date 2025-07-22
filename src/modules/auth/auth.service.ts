@@ -6,8 +6,9 @@ import * as bcrypt from 'bcrypt';
 import { UserService } from "../user/user.service";
 import { v4 as uuidv4 } from 'uuid';
 import { RegisterDto } from './auth.dto';
-import { TokenResponseDto } from './dto/refresh-token';
+import { TokenResponseDto } from './dto/refresh-token.dto';
 import { User } from '../user/user.schema';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class AuthService {
@@ -16,7 +17,8 @@ export class AuthService {
 
   constructor(
     private readonly userService: UserService,
-    private readonly jwtService: JwtService
+    private readonly jwtService: JwtService,
+    private readonly mailService: MailService
   ) {}
 
   async register(dto: RegisterDto): Promise<User> {
@@ -24,17 +26,70 @@ export class AuthService {
     if (existing) throw new BadRequestException('Email already in use');
 
     const hash = await bcrypt.hash(dto.password, 10);
-    return this.userService.create({
+    const verificationToken = uuidv4();
+    const verificationExpiry = new Date();
+    verificationExpiry.setHours(verificationExpiry.getHours() + 24); // Token expires in 24 hours
+
+    const user = await this.userService.create({
       ...dto,
       password: hash,
+      emailVerificationToken: verificationToken,
+      emailVerificationTokenExpires: verificationExpiry,
     });
+
+    // Send verification email
+    await this.mailService.sendVerificationEmail(user.email, verificationToken);
+
+    return user;
+  }
+
+  async verifyEmail(token: string): Promise<void> {
+    const user = await this.userService.findByVerificationToken(token);
+    if (!user) {
+      throw new BadRequestException('Invalid verification token');
+    }
+
+    if (user.emailVerificationTokenExpires < new Date()) {
+      throw new BadRequestException('Verification token has expired');
+    }
+
+    await this.userService.verifyEmail(user._id);
+  }
+
+  async resendVerificationEmail(email: string): Promise<void> {
+    const user = await this.userService.findByEmail(email);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('Email is already verified');
+    }
+
+    const verificationToken = uuidv4();
+    const verificationExpiry = new Date();
+    verificationExpiry.setHours(verificationExpiry.getHours() + 24);
+
+    await this.userService.updateVerificationToken(
+      user._id,
+      verificationToken,
+      verificationExpiry
+    );
+
+    await this.mailService.sendVerificationEmail(user.email, verificationToken);
   }
 
   async validateUser(email: string, password: string): Promise<User> {
     const user = await this.userService.findByEmail(email);
-    if (!user) throw new UnauthorizedException();
+    if (!user) throw new UnauthorizedException('Invalid credentials');
+    
     const valid = await bcrypt.compare(password, user.password);
-    if (!valid) throw new UnauthorizedException();
+    if (!valid) throw new UnauthorizedException('Invalid credentials');
+
+    if (!user.isEmailVerified) {
+      throw new UnauthorizedException('Please verify your email address before logging in');
+    }
+
     return user;
   }
 
@@ -77,6 +132,10 @@ export class AuthService {
   async forgotPassword(email: string) {
     const user = await this.userService.findByEmail(email);
     if (!user) throw new NotFoundException('User not found');
+
+    if (!user.isEmailVerified) {
+      throw new BadRequestException('Please verify your email address first');
+    }
 
     const token = uuidv4();
     this.resetTokens.set(email, token);

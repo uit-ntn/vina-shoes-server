@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards, Request } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards, Request, Get, Query } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { 
   ApiTags, 
@@ -12,7 +12,8 @@ import {
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto, ForgotPasswordDto, ResetPasswordDto, ChangePasswordDto } from './auth.dto';
-import { RefreshTokenDto, TokenResponseDto } from './dto/refresh-token';
+import { RefreshTokenDto, TokenResponseDto } from './dto/refresh-token.dto';
+import { VerifyEmailDto, ResendVerificationDto } from './dto/verify-email.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -22,7 +23,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Register new user' })
   @ApiBody({ type: RegisterDto, description: 'User registration data' })
   @ApiCreatedResponse({ 
-    description: 'User has been successfully created',
+    description: 'User has been successfully created and verification email sent',
     schema: {
       type: 'object',
       properties: {
@@ -36,6 +37,20 @@ export class AuthController {
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
+  }
+
+  @ApiOperation({ summary: 'Verify email address' })
+  @Get('verify-email')
+  async verifyEmail(@Query() dto: VerifyEmailDto) {
+    await this.authService.verifyEmail(dto.token);
+    return { message: 'Email verified successfully' };
+  }
+
+  @ApiOperation({ summary: 'Resend verification email' })
+  @Post('resend-verification')
+  async resendVerification(@Body() dto: ResendVerificationDto) {
+    await this.authService.resendVerificationEmail(dto.email);
+    return { message: 'Verification email sent successfully' };
   }
 
   @ApiOperation({ summary: 'Login user' })

@@ -26,8 +26,17 @@ export class User extends Document {
   @Prop({ default: UserRole.USER, enum: UserRole })
   role: string;
 
-  @Prop({ default: UserStatus.ACTIVE, enum: UserStatus })
+  @Prop({ default: UserStatus.INACTIVE, enum: UserStatus })
   status: UserStatus;
+
+  @Prop({ type: Boolean, default: false })
+  isEmailVerified: boolean;
+
+  @Prop({ type: String, default: null })
+  emailVerificationToken: string;
+
+  @Prop({ type: Date, default: null })
+  emailVerificationTokenExpires: Date;
 
   @Prop({ type: Date, default: null })
   lastLoginAt: Date;
