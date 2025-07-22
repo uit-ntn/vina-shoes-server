@@ -46,4 +46,34 @@ export class MailService {
       `,
     });
   }
+
+  async sendPasswordResetEmail(email: string, token: string): Promise<void> {
+    const resetLink = `${this.configService.get('APP_URL')}/auth/reset-password?token=${token}`;
+
+    await this.transporter.sendMail({
+      from: this.configService.get('mail.from'),
+      to: email,
+      subject: 'Reset Your Password',
+      html: `
+        <h1>Password Reset Request</h1>
+        <p>Hello!</p>
+        <p>You are receiving this email because we received a password reset request for your account.</p>
+        <a href="${resetLink}" 
+           style="display: inline-block; 
+                  padding: 10px 20px; 
+                  background-color: #4CAF50; 
+                  color: white; 
+                  text-decoration: none; 
+                  border-radius: 5px; 
+                  margin: 20px 0;">
+          Reset Password
+        </a>
+        <p>This password reset link will expire in 1 hour.</p>
+        <p>If you did not request a password reset, no further action is required.</p>
+        <p>If you're having trouble clicking the button, copy and paste the URL below into your web browser:</p>
+        <p>${resetLink}</p>
+        <p>Best regards,<br>Your Application Team</p>
+      `,
+    });
+  }
 } 

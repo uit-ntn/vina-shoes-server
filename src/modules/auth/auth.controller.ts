@@ -8,10 +8,14 @@ import {
   ApiBody, 
   ApiCreatedResponse,
   ApiOkResponse,
+  ApiUnauthorizedResponse,
+  ApiBadRequestResponse,
+  ApiNotFoundResponse,
   getSchemaPath
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, ForgotPasswordDto, ResetPasswordDto, ChangePasswordDto } from './auth.dto';
+import { RegisterDto, LoginDto } from './auth.dto';
+import { ForgotPasswordDto, ResetPasswordDto, ChangePasswordDto } from './dto/password.dto';
 import { RefreshTokenDto, TokenResponseDto } from './dto/refresh-token.dto';
 import { VerifyEmailDto, ResendVerificationDto } from './dto/verify-email.dto';
 
@@ -90,43 +94,54 @@ export class AuthController {
       }
     }
   })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   @Post('logout')
   async logout(@Request() req) {
     await this.authService.logout(req.user.sub);
     return { message: 'Logged out successfully' };
   }
 
-  @ApiOperation({ summary: 'Forgot password' })
+  @ApiOperation({ summary: 'Request password reset email' })
   @ApiBody({ type: ForgotPasswordDto })
   @ApiOkResponse({ 
-    description: 'Reset token sent',
+    description: 'Reset instructions sent to email',
     schema: {
       properties: {
-        message: { type: 'string', example: 'Reset token sent to email' }
+        message: { 
+          type: 'string', 
+          example: 'Password reset instructions sent to your email' 
+        }
       }
     }
   })
+  @ApiNotFoundResponse({ description: 'User not found' })
+  @ApiBadRequestResponse({ description: 'Email not verified' })
   @Post('forgot-password')
-  forgot(@Body() dto: ForgotPasswordDto) {
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto.email);
   }
 
-  @ApiOperation({ summary: 'Reset password' })
+  @ApiOperation({ summary: 'Reset password using token' })
   @ApiBody({ type: ResetPasswordDto })
   @ApiOkResponse({ 
     description: 'Password reset successful',
     schema: {
       properties: {
-        message: { type: 'string', example: 'Password reset successfully' }
+        message: { 
+          type: 'string', 
+          example: 'Password reset successfully' 
+        }
       }
     }
   })
+  @ApiBadRequestResponse({ description: 'Invalid or expired token' })
+  @ApiNotFoundResponse({ description: 'User not found' })
   @Post('reset-password')
-  reset(@Body() dto: ResetPasswordDto) {
+  async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.email, dto.token, dto.newPassword);
   }
 
-  @ApiOperation({ summary: 'Change password' })
+  @ApiOperation({ summary: 'Change password (requires authentication)' })
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
   @ApiBody({ type: ChangePasswordDto })
@@ -134,17 +149,21 @@ export class AuthController {
     description: 'Password changed successful',
     schema: {
       properties: {
-        message: { type: 'string', example: 'Password changed successfully' }
+        message: { 
+          type: 'string', 
+          example: 'Password changed successfully' 
+        }
       }
     }
   })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized or invalid current password' })
   @Post('change-password')
   async changePassword(
     @Request() req,
     @Body() dto: ChangePasswordDto
   ) {
     return this.authService.changePassword(
-      req.user.userId, 
+      req.user.sub, 
       dto.currentPassword, 
       dto.newPassword
     );

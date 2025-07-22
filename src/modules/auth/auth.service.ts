@@ -9,10 +9,11 @@ import { RegisterDto } from './auth.dto';
 import { TokenResponseDto } from './dto/refresh-token.dto';
 import { User } from '../user/user.schema';
 import { MailService } from '../mail/mail.service';
+import { Types } from 'mongoose';
 
 @Injectable()
 export class AuthService {
-  private resetTokens = new Map<string, string>(); // email -> token
+  private resetTokens = new Map<string, { token: string, expires: Date }>(); // email -> { token, expires }
   private refreshTokens = new Map<string, string>(); // userId -> refreshToken
 
   constructor(
@@ -53,7 +54,7 @@ export class AuthService {
       throw new BadRequestException('Verification token has expired');
     }
 
-    await this.userService.verifyEmail(user._id);
+    await this.userService.verifyEmail(user._id.toString());
   }
 
   async resendVerificationEmail(email: string): Promise<void> {
@@ -71,7 +72,7 @@ export class AuthService {
     verificationExpiry.setHours(verificationExpiry.getHours() + 24);
 
     await this.userService.updateVerificationToken(
-      user._id,
+      user._id.toString(),
       verificationToken,
       verificationExpiry
     );
@@ -108,7 +109,7 @@ export class AuthService {
   }
 
   async login(user: User): Promise<TokenResponseDto> {
-    const tokens = await this.generateTokens(String(user._id), user.email);
+    const tokens = await this.generateTokens(user._id.toString(), user.email);
     return tokens;
   }
 
@@ -137,23 +138,39 @@ export class AuthService {
       throw new BadRequestException('Please verify your email address first');
     }
 
+    // Generate reset token
     const token = uuidv4();
-    this.resetTokens.set(email, token);
+    const expires = new Date();
+    expires.setHours(expires.getHours() + 1); // Token expires in 1 hour
 
-    console.log(`Reset token for ${email}: ${token}`);
-    return { message: 'Reset token sent to email' };
+    // Store token with expiration
+    this.resetTokens.set(email, { token, expires });
+
+    // Send reset email
+    await this.mailService.sendPasswordResetEmail(email, token);
+
+    return { message: 'Password reset instructions sent to your email' };
   }
 
   async resetPassword(email: string, token: string, newPassword: string) {
-    const savedToken = this.resetTokens.get(email);
-    if (!savedToken || savedToken !== token)
-      throw new BadRequestException('Invalid or expired token');
+    const resetData = this.resetTokens.get(email);
+    if (!resetData || resetData.token !== token) {
+      throw new BadRequestException('Invalid reset token');
+    }
+
+    if (resetData.expires < new Date()) {
+      this.resetTokens.delete(email);
+      throw new BadRequestException('Reset token has expired');
+    }
 
     const user = await this.userService.findByEmail(email);
-    if (!user) throw new NotFoundException();
+    if (!user) throw new NotFoundException('User not found');
 
+    // Hash new password
     const hash = await bcrypt.hash(newPassword, 10);
-    await this.userService.updatePassword(String(user._id), hash);
+    await this.userService.updatePassword(user._id.toString(), hash);
+
+    // Clear reset token
     this.resetTokens.delete(email);
 
     return { message: 'Password reset successfully' };
@@ -161,7 +178,7 @@ export class AuthService {
 
   async changePassword(userId: string, currentPwd: string, newPwd: string) {
     const user = await this.userService.findById(userId);
-    if (!user) throw new NotFoundException();
+    if (!user) throw new NotFoundException('User not found');
 
     const valid = await bcrypt.compare(currentPwd, user.password);
     if (!valid) throw new UnauthorizedException('Wrong current password');
@@ -173,6 +190,10 @@ export class AuthService {
   }
 
   async logout(userId: string): Promise<void> {
+    // Remove refresh token
     this.refreshTokens.delete(userId);
+
+    // Update last login time
+    await this.userService.updateLastLogin(userId);
   }
 }

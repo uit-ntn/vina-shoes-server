@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 export enum UserStatus {
   ACTIVE = 'active',
@@ -14,6 +14,8 @@ export enum UserRole {
 
 @Schema({ timestamps: true })
 export class User extends Document {
+  declare _id: Types.ObjectId;
+
   @Prop({ required: true })
   name: string;
 
