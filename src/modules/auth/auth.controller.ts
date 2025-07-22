@@ -11,14 +11,8 @@ import {
   getSchemaPath
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import {
-  RegisterDto,
-  LoginDto,
-  LoginResponseDto,
-  ForgotPasswordDto,
-  ResetPasswordDto,
-  ChangePasswordDto
-} from './auth.dto';
+import { RegisterDto, LoginDto, ForgotPasswordDto, ResetPasswordDto, ChangePasswordDto } from './auth.dto';
+import { RefreshTokenDto, TokenResponseDto } from './dto/refresh-token';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -51,29 +45,40 @@ export class AuthController {
   })
   @ApiOkResponse({ 
     description: 'User successfully authenticated',
-    schema: {
-      type: 'object',
-      properties: {
-        access_token: { 
-          type: 'string', 
-          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' 
-        },
-        user: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', example: '60d21b4667d0d8992e610c85' },
-            name: { type: 'string', example: 'John Doe' },
-            email: { type: 'string', example: 'john@example.com' },
-            role: { type: 'string', example: 'user' }
-          }
-        }
-      }
-    }
+    type: TokenResponseDto
   })
   @Post('login')
   async login(@Body() dto: LoginDto) {
     const user = await this.authService.validateUser(dto.email, dto.password);
     return this.authService.login(user);
+  }
+
+  @ApiOperation({ summary: 'Refresh access token' })
+  @ApiBody({ type: RefreshTokenDto })
+  @ApiOkResponse({
+    description: 'New access token generated',
+    type: TokenResponseDto
+  })
+  @Post('refresh')
+  async refresh(@Body() dto: RefreshTokenDto) {
+    return this.authService.refreshToken(dto.refreshToken);
+  }
+
+  @ApiOperation({ summary: 'Logout user' })
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
+  @ApiOkResponse({
+    description: 'User successfully logged out',
+    schema: {
+      properties: {
+        message: { type: 'string', example: 'Logged out successfully' }
+      }
+    }
+  })
+  @Post('logout')
+  async logout(@Request() req) {
+    await this.authService.logout(req.user.sub);
+    return { message: 'Logged out successfully' };
   }
 
   @ApiOperation({ summary: 'Forgot password' })

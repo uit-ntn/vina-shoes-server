@@ -5,12 +5,14 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UserService } from "../user/user.service";
 import { v4 as uuidv4 } from 'uuid';
-import { RegisterDto, LoginResponseDto } from './auth.dto';
+import { RegisterDto } from './auth.dto';
+import { TokenResponseDto } from './dto/refresh-token';
 import { User } from '../user/user.schema';
 
 @Injectable()
 export class AuthService {
   private resetTokens = new Map<string, string>(); // email -> token
+  private refreshTokens = new Map<string, string>(); // userId -> refreshToken
 
   constructor(
     private readonly userService: UserService,
@@ -36,17 +38,40 @@ export class AuthService {
     return user;
   }
 
-  async login(user: User): Promise<LoginResponseDto> {
-    const payload = { sub: user._id, email: user.email };
+  async generateTokens(userId: string, email: string): Promise<TokenResponseDto> {
+    const payload = { sub: userId, email };
+    const accessToken = this.jwtService.sign(payload, { expiresIn: '30m' });
+    const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+    
+    // Store refresh token
+    this.refreshTokens.set(userId, refreshToken);
+    
     return {
-      access_token: this.jwtService.sign(payload),
-      user: {
-        id: String(user._id),
-        email: user.email,
-        name: user.name,
-        role: user.role
-      }
+      accessToken,
+      refreshToken,
     };
+  }
+
+  async login(user: User): Promise<TokenResponseDto> {
+    const tokens = await this.generateTokens(String(user._id), user.email);
+    return tokens;
+  }
+
+  async refreshToken(refreshToken: string): Promise<TokenResponseDto> {
+    try {
+      const decoded = this.jwtService.verify(refreshToken);
+      const storedRefreshToken = this.refreshTokens.get(decoded.sub);
+      
+      if (!storedRefreshToken || storedRefreshToken !== refreshToken) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      // Generate new tokens
+      const tokens = await this.generateTokens(decoded.sub, decoded.email);
+      return tokens;
+    } catch (error) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
   }
 
   async forgotPassword(email: string) {
@@ -86,5 +111,9 @@ export class AuthService {
     await this.userService.updatePassword(userId, hash);
 
     return { message: 'Password changed successfully' };
+  }
+
+  async logout(userId: string): Promise<void> {
+    this.refreshTokens.delete(userId);
   }
 }
