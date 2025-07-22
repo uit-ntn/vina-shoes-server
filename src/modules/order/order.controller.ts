@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request, Put } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { OrderService } from './order.service';
 import { CreateOrderRequestDto, CreateOrderResponseDto } from './dto/create-order.dto';
-import { GetOrdersQueryDto, GetOrdersByUserIdDto, OrderResponseDto, OrdersListResponseDto, OrderStatsResponseDto } from './dto/get-order.dto';
+import { GetOrdersQueryDto, OrderResponseDto, OrdersListResponseDto, OrderStatsResponseDto } from './dto/get-order.dto';
 import { UpdateOrderStatusRequestDto, UpdateOrderStatusResponseDto } from './dto/update-order-status.dto';
+import { UpdateOrderRequestDto, UpdateOrderResponseDto } from './dto/update-order.dto';
 import { DeleteOrderResponseDto } from './dto/delete-order.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -44,6 +45,17 @@ export class OrderController {
     return this.orderService.findAllByUser(req.user.userId);
   }
 
+  @Put(':id')
+  @ApiOperation({ summary: 'Update order (Only PENDING status)' })
+  @ApiResponse({ status: 200, type: UpdateOrderResponseDto })
+  async update(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() updateOrderDto: UpdateOrderRequestDto
+  ) {
+    return this.orderService.update(id, req.user.userId, updateOrderDto);
+  }
+
   @Get('user/:userId')
   @Roles(Role.Admin)
   @ApiOperation({ summary: 'Get orders by user ID (Admin)' })
@@ -72,7 +84,7 @@ export class OrderController {
     return this.orderService.findOne(id);
   }
 
-  @Patch(':id')
+  @Patch(':id/status')
   @Roles(Role.Admin)
   @ApiOperation({ summary: 'Update order status (Admin)' })
   @ApiResponse({ status: 200, type: UpdateOrderStatusResponseDto })
