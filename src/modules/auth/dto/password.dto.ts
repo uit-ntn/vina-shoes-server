@@ -1,50 +1,56 @@
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsString, MinLength, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class ForgotPasswordRequestDto {
-  @ApiProperty({ example: 'john@example.com' })
+export class ForgotPasswordDto {
+  @ApiProperty({
+    description: 'Email address to send reset instructions',
+    example: 'user@example.com'
+  })
   @IsEmail()
+  @IsNotEmpty()
   email: string;
 }
 
-export class ForgotPasswordResponseDto {
-  @ApiProperty({ example: 'Reset token sent to email' })
-  message: string;
-}
+export class ResetPasswordDto {
+  @ApiProperty({
+    description: 'Email address of the account',
+    example: 'user@example.com'
+  })
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
 
-export class ResetPasswordRequestDto {
-  @ApiProperty()
+  @ApiProperty({
+    description: 'Reset token received via email',
+    example: 'abc123def456'
+  })
   @IsString()
+  @IsNotEmpty()
   token: string;
 
-  @ApiProperty({ example: 'john@example.com' })
-  @IsEmail()
-  email: string;
-
-  @ApiProperty({ example: 'newpassword123' })
+  @ApiProperty({
+    description: 'New password',
+    example: 'newSecurePassword123'
+  })
   @IsString()
   @MinLength(6)
   newPassword: string;
 }
 
-export class ResetPasswordResponseDto {
-  @ApiProperty({ example: 'Password reset successfully' })
-  message: string;
-}
-
-export class ChangePasswordRequestDto {
-  @ApiProperty({ example: 'currentpassword123' })
+export class ChangePasswordDto {
+  @ApiProperty({
+    description: 'Current password',
+    example: 'currentPassword123'
+  })
   @IsString()
-  @MinLength(6)
+  @IsNotEmpty()
   currentPassword: string;
 
-  @ApiProperty({ example: 'newpassword123' })
+  @ApiProperty({
+    description: 'New password',
+    example: 'newSecurePassword123'
+  })
   @IsString()
   @MinLength(6)
   newPassword: string;
-}
-
-export class ChangePasswordResponseDto {
-  @ApiProperty({ example: 'Password changed successfully' })
-  message: string;
 }

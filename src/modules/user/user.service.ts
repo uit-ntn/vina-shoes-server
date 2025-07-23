@@ -1,11 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { User } from './user.schema';
+import { User, UserStatus } from './user.schema';
 import { ListUserRequestDto } from './dto/list-user.dto';
 import { UpdateUserStatusRequestDto } from './dto/update-user-status.dto';
 import { UpdateUserRoleRequestDto } from './dto/update-user-role.dto';
-import { UserStatus } from './dto/user-base.dto';
+import { UserStatus as UserStatusDto } from './dto/user-base.dto';
 import { CreateUserRequestDto } from './dto/create-user.dto';
 import { UpdateUserRequestDto } from './dto/update-user.dto';
 
@@ -21,17 +21,96 @@ export class UserService {
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    return this.userModel.findOne({ email }).exec();
+    return this.userModel.findOne({ email, deletedAt: null });
   }
 
   async findById(id: string): Promise<User | null> {
-    return this.userModel.findById(id).exec();
+    return this.userModel.findOne({ _id: id, deletedAt: null });
+  }
+
+  async findByVerificationToken(token: string): Promise<User | null> {
+    return this.userModel.findOne({
+      verificationToken: token,
+      deletedAt: null
+    });
+  }
+
+  async verifyEmail(userId: string): Promise<void> {
+    await this.userModel.updateOne(
+      { _id: userId },
+      {
+        $set: {
+          emailVerified: true,
+          verificationToken: null,
+          verificationExpires: null,
+          status: UserStatus.ACTIVE
+        }
+      }
+    );
+  }
+
+  async updateVerificationToken(
+    userId: string,
+    token: string,
+    expires: Date
+  ): Promise<void> {
+    await this.userModel.updateOne(
+      { _id: userId },
+      {
+        $set: {
+          verificationToken: token,
+          verificationExpires: expires
+        }
+      }
+    );
+  }
+
+  async updatePassword(userId: string, newPassword: string): Promise<void> {
+    await this.userModel.updateOne(
+      { _id: userId },
+      { 
+        $set: { 
+          password: newPassword,
+          passwordChangedAt: new Date()
+        } 
+      }
+    );
+  }
+
+  async addRefreshToken(userId: string, refreshToken: string): Promise<void> {
+    await this.userModel.updateOne(
+      { _id: userId },
+      { $push: { refreshTokens: refreshToken } }
+    );
+  }
+
+  async removeRefreshToken(userId: string, refreshToken: string): Promise<void> {
+    await this.userModel.updateOne(
+      { _id: userId },
+      { $pull: { refreshTokens: refreshToken } }
+    );
+  }
+
+  async clearAllRefreshTokens(userId: string): Promise<void> {
+    await this.userModel.updateOne(
+      { _id: userId },
+      { $set: { refreshTokens: [] } }
+    );
+  }
+
+  async validateRefreshToken(userId: string, refreshToken: string): Promise<boolean> {
+    const user = await this.userModel.findOne({
+      _id: userId,
+      refreshTokens: refreshToken,
+      deletedAt: null
+    });
+    return !!user;
   }
 
   async findAll(query: ListUserRequestDto) {
     const { page = 1, limit = 10, search, status } = query;
     
-    const filter: any = {};
+    const filter: any = { deletedAt: null };
     if (search) {
       filter.$or = [
         { name: new RegExp(search, 'i') },
@@ -61,14 +140,6 @@ export class UserService {
 
   async update(id: string, dto: UpdateUserRequestDto): Promise<User | null> {
     return this.userModel.findByIdAndUpdate(id, dto, { new: true }).exec();
-  }
-
-  async updatePassword(userId: string, password: string): Promise<User | null> {
-    return this.userModel.findByIdAndUpdate(
-      userId,
-      { password },
-      { new: true }
-    ).exec();
   }
 
   async updateStatus(id: string, dto: UpdateUserStatusRequestDto) {
@@ -180,10 +251,10 @@ export class UserService {
 
   async getStats() {
     const [total, active, inactive, banned] = await Promise.all([
-      this.userModel.countDocuments(),
-      this.userModel.countDocuments({ status: UserStatus.ACTIVE }),
-      this.userModel.countDocuments({ status: UserStatus.INACTIVE }),
-      this.userModel.countDocuments({ status: UserStatus.BANNED })
+      this.userModel.countDocuments({ deletedAt: null }),
+      this.userModel.countDocuments({ status: UserStatus.ACTIVE, deletedAt: null }),
+      this.userModel.countDocuments({ status: UserStatus.INACTIVE, deletedAt: null }),
+      this.userModel.countDocuments({ status: UserStatus.BANNED, deletedAt: null })
     ]);
 
     return {
@@ -199,7 +270,8 @@ export class UserService {
       $or: [
         { name: new RegExp(query, 'i') },
         { email: new RegExp(query, 'i') }
-      ]
+      ],
+      deletedAt: null
     }).exec();
   }
 }
