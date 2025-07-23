@@ -30,7 +30,7 @@ export class UserService {
 
   async findByVerificationToken(token: string): Promise<User | null> {
     return this.userModel.findOne({
-      emailVerificationToken: token,
+      verificationToken: token,
       deletedAt: null
     });
   }
@@ -40,9 +40,9 @@ export class UserService {
       { _id: userId },
       {
         $set: {
-          isEmailVerified: true,
-          emailVerificationToken: null,
-          emailVerificationTokenExpires: null,
+          emailVerified: true,
+          verificationToken: null,
+          verificationExpires: null,
           status: UserStatus.ACTIVE
         }
       }
@@ -58,8 +58,8 @@ export class UserService {
       { _id: userId },
       {
         $set: {
-          emailVerificationToken: token,
-          emailVerificationTokenExpires: expires
+          verificationToken: token,
+          verificationExpires: expires
         }
       }
     );
@@ -68,14 +68,49 @@ export class UserService {
   async updatePassword(userId: string, newPassword: string): Promise<void> {
     await this.userModel.updateOne(
       { _id: userId },
-      { $set: { password: newPassword } }
+      { 
+        $set: { 
+          password: newPassword,
+          passwordChangedAt: new Date()
+        } 
+      }
     );
+  }
+
+  async addRefreshToken(userId: string, refreshToken: string): Promise<void> {
+    await this.userModel.updateOne(
+      { _id: userId },
+      { $push: { refreshTokens: refreshToken } }
+    );
+  }
+
+  async removeRefreshToken(userId: string, refreshToken: string): Promise<void> {
+    await this.userModel.updateOne(
+      { _id: userId },
+      { $pull: { refreshTokens: refreshToken } }
+    );
+  }
+
+  async clearAllRefreshTokens(userId: string): Promise<void> {
+    await this.userModel.updateOne(
+      { _id: userId },
+      { $set: { refreshTokens: [] } }
+    );
+  }
+
+  async validateRefreshToken(userId: string, refreshToken: string): Promise<boolean> {
+    const user = await this.userModel.findOne({
+      _id: userId,
+      refreshTokens: refreshToken,
+      deletedAt: null
+    });
+    return !!user;
   }
 
   async findAll(query: ListUserRequestDto) {
     const { page = 1, limit = 10, search, status } = query;
     
-    const filter: any = {};
+    const filter: any = { deletedAt: null };
     if (search) {
       filter.$or = [
         { name: new RegExp(search, 'i') },
@@ -216,10 +251,10 @@ export class UserService {
 
   async getStats() {
     const [total, active, inactive, banned] = await Promise.all([
-      this.userModel.countDocuments(),
-      this.userModel.countDocuments({ status: UserStatus.ACTIVE }),
-      this.userModel.countDocuments({ status: UserStatus.INACTIVE }),
-      this.userModel.countDocuments({ status: UserStatus.BANNED })
+      this.userModel.countDocuments({ deletedAt: null }),
+      this.userModel.countDocuments({ status: UserStatus.ACTIVE, deletedAt: null }),
+      this.userModel.countDocuments({ status: UserStatus.INACTIVE, deletedAt: null }),
+      this.userModel.countDocuments({ status: UserStatus.BANNED, deletedAt: null })
     ]);
 
     return {
@@ -235,7 +270,8 @@ export class UserService {
       $or: [
         { name: new RegExp(query, 'i') },
         { email: new RegExp(query, 'i') }
-      ]
+      ],
+      deletedAt: null
     }).exec();
   }
 }

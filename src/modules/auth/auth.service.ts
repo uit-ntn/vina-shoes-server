@@ -14,7 +14,6 @@ import { Types } from 'mongoose';
 @Injectable()
 export class AuthService {
   private resetTokens = new Map<string, { token: string, expires: Date }>(); // email -> { token, expires }
-  private refreshTokens = new Map<string, string>(); // userId -> refreshToken
 
   constructor(
     private readonly userService: UserService,
@@ -34,8 +33,8 @@ export class AuthService {
     const user = await this.userService.create({
       ...dto,
       password: hash,
-      emailVerificationToken: verificationToken,
-      emailVerificationTokenExpires: verificationExpiry,
+      verificationToken: verificationToken,
+      verificationExpires: verificationExpiry,
     });
 
     // Send verification email
@@ -50,7 +49,7 @@ export class AuthService {
       throw new BadRequestException('Invalid verification token');
     }
 
-    if (user.emailVerificationTokenExpires < new Date()) {
+    if (user.verificationExpires < new Date()) {
       throw new BadRequestException('Verification token has expired');
     }
 
@@ -63,7 +62,7 @@ export class AuthService {
       throw new NotFoundException('User not found');
     }
 
-    if (user.isEmailVerified) {
+    if (user.emailVerified) {
       throw new BadRequestException('Email is already verified');
     }
 
@@ -87,7 +86,7 @@ export class AuthService {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
-    if (!user.isEmailVerified) {
+    if (!user.emailVerified) {
       throw new UnauthorizedException('Please verify your email address before logging in');
     }
 
@@ -99,8 +98,8 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload, { expiresIn: '30m' });
     const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
     
-    // Store refresh token
-    this.refreshTokens.set(userId, refreshToken);
+    // Store refresh token in user's refreshTokens array
+    await this.userService.addRefreshToken(userId, refreshToken);
     
     return {
       accessToken,
@@ -110,17 +109,25 @@ export class AuthService {
 
   async login(user: User): Promise<TokenResponseDto> {
     const tokens = await this.generateTokens(user._id.toString(), user.email);
+    
+    // Update last login time
+    await this.userService.updateLastLogin(user._id.toString());
+    
     return tokens;
   }
 
   async refreshToken(refreshToken: string): Promise<TokenResponseDto> {
     try {
       const decoded = this.jwtService.verify(refreshToken);
-      const storedRefreshToken = this.refreshTokens.get(decoded.sub);
       
-      if (!storedRefreshToken || storedRefreshToken !== refreshToken) {
+      // Validate refresh token exists in user's refreshTokens array
+      const isValidToken = await this.userService.validateRefreshToken(decoded.sub, refreshToken);
+      if (!isValidToken) {
         throw new UnauthorizedException('Invalid refresh token');
       }
+
+      // Remove old refresh token
+      await this.userService.removeRefreshToken(decoded.sub, refreshToken);
 
       // Generate new tokens
       const tokens = await this.generateTokens(decoded.sub, decoded.email);
@@ -134,7 +141,7 @@ export class AuthService {
     const user = await this.userService.findByEmail(email);
     if (!user) throw new NotFoundException('User not found');
 
-    if (!user.isEmailVerified) {
+    if (!user.emailVerified) {
       throw new BadRequestException('Please verify your email address first');
     }
 
@@ -170,6 +177,9 @@ export class AuthService {
     const hash = await bcrypt.hash(newPassword, 10);
     await this.userService.updatePassword(user._id.toString(), hash);
 
+    // Clear all refresh tokens for security
+    await this.userService.clearAllRefreshTokens(user._id.toString());
+
     // Clear reset token
     this.resetTokens.delete(email);
 
@@ -186,14 +196,22 @@ export class AuthService {
     const hash = await bcrypt.hash(newPwd, 10);
     await this.userService.updatePassword(userId, hash);
 
+    // Clear all refresh tokens for security after password change
+    await this.userService.clearAllRefreshTokens(userId);
+
     return { message: 'Password changed successfully' };
   }
 
   async logout(userId: string): Promise<void> {
-    // Remove refresh token
-    this.refreshTokens.delete(userId);
+    // Clear all refresh tokens
+    await this.userService.clearAllRefreshTokens(userId);
 
     // Update last login time
     await this.userService.updateLastLogin(userId);
+  }
+
+  async logoutFromDevice(userId: string, refreshToken: string): Promise<void> {
+    // Remove specific refresh token
+    await this.userService.removeRefreshToken(userId, refreshToken);
   }
 }

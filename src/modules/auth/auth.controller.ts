@@ -83,22 +83,53 @@ export class AuthController {
     return this.authService.refreshToken(dto.refreshToken);
   }
 
-  @ApiOperation({ summary: 'Logout user' })
+  @ApiOperation({ summary: 'Logout user from all devices' })
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
   @ApiOkResponse({
-    description: 'User successfully logged out',
+    description: 'User successfully logged out from all devices',
     schema: {
       properties: {
-        message: { type: 'string', example: 'Logged out successfully' }
+        message: { type: 'string', example: 'Logged out successfully from all devices' }
       }
     }
   })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   @Post('logout')
   async logout(@Request() req) {
-    await this.authService.logout(req.user.sub);
-    return { message: 'Logged out successfully' };
+    await this.authService.logout(req.user.userId);
+    return { message: 'Logged out successfully from all devices' };
+  }
+
+  @ApiOperation({ summary: 'Logout user from specific device' })
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBody({ 
+    schema: {
+      type: 'object',
+      properties: {
+        refreshToken: { 
+          type: 'string', 
+          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+          description: 'The refresh token of the device to logout from'
+        }
+      },
+      required: ['refreshToken']
+    }
+  })
+  @ApiOkResponse({
+    description: 'User successfully logged out from specific device',
+    schema: {
+      properties: {
+        message: { type: 'string', example: 'Logged out successfully from device' }
+      }
+    }
+  })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  @Post('logout-device')
+  async logoutFromDevice(@Request() req, @Body() body: { refreshToken: string }) {
+    await this.authService.logoutFromDevice(req.user.userId, body.refreshToken);
+    return { message: 'Logged out successfully from device' };
   }
 
   @ApiOperation({ summary: 'Request password reset email' })
@@ -163,7 +194,7 @@ export class AuthController {
     @Body() dto: ChangePasswordDto
   ) {
     return this.authService.changePassword(
-      req.user.sub, 
+      req.user.userId, 
       dto.currentPassword, 
       dto.newPassword
     );

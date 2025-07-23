@@ -1,6 +1,6 @@
-import { IsEmail, IsString, MinLength, IsOptional } from 'class-validator';
+import { IsEmail, IsString, MinLength, IsOptional, IsBoolean } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { UserBaseDto } from './user-base.dto';
+import { UserBaseDto, UserPreferencesDto, UserAddressDto } from './user-base.dto';
 
 export class CreateUserRequestDto {
   @ApiProperty({ example: 'John Doe' })
@@ -17,14 +17,40 @@ export class CreateUserRequestDto {
   @MinLength(6)
   password: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: '0987654321' })
   @IsOptional()
   @IsString()
-  emailVerificationToken?: string;
+  phone?: string;
+
+  @ApiPropertyOptional({ example: 'https://s3.amazonaws.com/avatars/user1.jpg' })
+  @IsOptional()
+  @IsString()
+  avatarUrl?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
-  emailVerificationTokenExpires?: Date;
+  @IsString()
+  verificationToken?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  verificationExpires?: Date;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  twoFactorEnabled?: boolean;
+
+  @ApiPropertyOptional({ type: UserPreferencesDto })
+  @IsOptional()
+  preferences?: {
+    language?: string;
+    newsletter?: boolean;
+  };
+
+  @ApiPropertyOptional({ type: [UserAddressDto] })
+  @IsOptional()
+  addresses?: UserAddressDto[];
 }
 
 export class CreateUserResponseDto {

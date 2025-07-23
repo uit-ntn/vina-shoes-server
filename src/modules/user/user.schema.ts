@@ -25,23 +25,53 @@ export class User extends Document {
   @Prop({ required: true })
   password: string;
 
+  @Prop({ default: '' })
+  phone: string;
+
+  @Prop({ default: '' })
+  avatarUrl: string;
+
   @Prop({ default: UserRole.USER, enum: UserRole })
   role: string;
 
-  @Prop({ default: UserStatus.INACTIVE, enum: UserStatus })
+  @Prop({ default: UserStatus.ACTIVE, enum: UserStatus })
   status: UserStatus;
 
   @Prop({ type: Boolean, default: false })
-  isEmailVerified: boolean;
+  emailVerified: boolean;
 
   @Prop({ type: String, default: null })
-  emailVerificationToken: string;
+  verificationToken: string;
 
   @Prop({ type: Date, default: null })
-  emailVerificationTokenExpires: Date;
+  verificationExpires: Date;
 
-  @Prop({ type: Date, default: null })
+  @Prop({ type: Date, default: () => new Date(0) })
   lastLoginAt: Date;
+
+  @Prop({ type: Date, default: () => new Date(0) })
+  passwordChangedAt: Date;
+
+  @Prop({ type: [String], default: [] })
+  refreshTokens: string[];
+
+  @Prop({ type: Boolean, default: false })
+  twoFactorEnabled: boolean;
+
+  @Prop({ 
+    type: {
+      language: { type: String, default: 'vi' },
+      newsletter: { type: Boolean, default: true }
+    },
+    default: () => ({ language: 'vi', newsletter: true })
+  })
+  preferences: {
+    language: string;
+    newsletter: boolean;
+  };
+
+  @Prop({ type: [Object], default: [] })
+  addresses: any[];
 
   @Prop({ type: Date, default: null })
   deletedAt: Date;
