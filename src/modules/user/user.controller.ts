@@ -1,7 +1,7 @@
 import { Controller, Get, Put, Delete, Query, Param, Body, UseGuards, Request, NotFoundException, Post, Patch } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { UserService } from './user.service';
-import { ListUserRequestDto, ListUserResponseDto } from './dto/list-user.dto';
+import { ListUserResponseDto } from './dto/list-user.dto';
 import { 
   UpdateUserRequestDto, 
   UpdateUserResponseDto 
@@ -38,41 +38,28 @@ import { FindDeletedUsersResponseDto } from './dto/find-deleted-users.dto';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @ApiOperation({ summary: 'Get all users with pagination and filters' })
-  @ApiQuery({ name: 'page', required: false, description: 'Page number', type: Number })
-  @ApiQuery({ name: 'limit', required: false, description: 'Items per page', type: Number })
-  @ApiQuery({ name: 'search', required: false, description: 'Search term', type: String })
-  @ApiQuery({ name: 'status', required: false, enum: ['active', 'inactive', 'banned'], description: 'User status filter' })
+  @ApiOperation({ summary: 'Get all users' })
   @ApiOkResponse({
-    description: 'List of users',
+    description: 'List of all users',
     schema: {
-      type: 'object',
-      properties: {
-        users: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              email: { type: 'string' },
-              name: { type: 'string' },
-              role: { type: 'string', enum: ['admin', 'user'] },
-              status: { type: 'string', enum: ['active', 'inactive', 'banned'] },
-              createdAt: { type: 'string', format: 'date-time' },
-              updatedAt: { type: 'string', format: 'date-time' }
-            }
-          }
-        },
-        total: { type: 'number' },
-        page: { type: 'number' },
-        limit: { type: 'number' },
-        totalPages: { type: 'number' }
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          email: { type: 'string' },
+          name: { type: 'string' },
+          role: { type: 'string', enum: ['admin', 'user'] },
+          status: { type: 'string', enum: ['active', 'inactive', 'banned'] },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' }
+        }
       }
     }
   })
   @Get()
-  findAll(@Query() query: ListUserRequestDto) {
-    return this.userService.findAll(query);
+  findAll() {
+    return this.userService.findAll();
   }
 
 

@@ -2,8 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserStatus } from './user.schema';
-import { ListUserRequestDto } from './dto/list-user.dto';
-
 import { UserStatus as UserStatusDto } from './dto/user-base.dto';
 import { CreateUserRequestDto } from './dto/create-user.dto';
 import { UpdateUserRequestDto } from './dto/update-user.dto';
@@ -106,35 +104,8 @@ export class UserService {
     return !!user;
   }
 
-  async findAll(query: ListUserRequestDto) {
-    const { page = 1, limit = 10, search, status } = query;
-    
-    const filter: any = { deletedAt: null };
-    if (search) {
-      filter.$or = [
-        { name: new RegExp(search, 'i') },
-        { email: new RegExp(search, 'i') }
-      ];
-    }
-    if (status) {
-      filter.status = status;
-    }
-
-    const [users, total] = await Promise.all([
-      this.userModel.find(filter)
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .exec(),
-      this.userModel.countDocuments(filter)
-    ]);
-
-    return {
-      users,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit)
-    };
+  async findAll() {
+    return this.userModel.find({ deletedAt: null }).exec();
   }
 
   async update(id: string, dto: UpdateUserRequestDto): Promise<User | null> {

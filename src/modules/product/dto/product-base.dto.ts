@@ -33,7 +33,7 @@ export class ProductBaseDto {
   isNewArrival: boolean;
 
   @ApiProperty({ type: [String] })
-  category: string[];
+  categories: string[];
 
   @ApiProperty()
   quantity: number;

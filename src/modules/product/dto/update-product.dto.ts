@@ -63,12 +63,6 @@ export class UpdateProductRequestDto {
   @IsString({ each: true })
   tags?: string[];
 
-  @ApiProperty({ required: false, type: [String] })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  category?: string[];
-
   @ApiProperty({ required: false })
   @IsOptional()
   @IsNumber()
@@ -96,9 +90,6 @@ export class UpdateProductResponseDto {
 
   @ApiProperty()
   isNewArrival: boolean;
-
-  @ApiProperty({ type: [String] })
-  category: string[];
 
   @ApiProperty()
   quantity: number;

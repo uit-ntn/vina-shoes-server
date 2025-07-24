@@ -47,9 +47,6 @@ export class GetProductResponseDto {
   @ApiProperty({ type: [String] })
   tags: string[];
 
-  @ApiProperty({ type: [String] })
-  category: string[];
-
   @ApiProperty()
   quantity: number;
 

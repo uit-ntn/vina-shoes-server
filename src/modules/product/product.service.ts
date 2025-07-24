@@ -16,13 +16,8 @@ export class ProductService {
     return product.save();
   }
 
-  async findAll(search?: string) {
-    const query = search 
-      ? { name: new RegExp(search, 'i') }
-      : {};
-
-    const products = await this.productModel.find(query).exec();
-    return products;
+  async findAll() {
+    return this.productModel.find().exec();
   }
 
   async findOne(id: string): Promise<Product> {
@@ -50,6 +45,21 @@ export class ProductService {
 
 
 
+
+  async getAllCategories(): Promise<string[]> {
+    const products = await this.productModel.find().select('categories').exec();
+    
+    const allCategories = new Set<string>();
+    
+    products.forEach(product => {
+      // Add from categories field
+      if (product.categories && product.categories.length > 0) {
+        product.categories.forEach(cat => allCategories.add(cat));
+      }
+    });
+    
+    return Array.from(allCategories).sort();
+  }
 
   async getNewArrivals() {
     return this.productModel
