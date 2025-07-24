@@ -62,6 +62,10 @@ export class CreateProductRequestDto {
   @IsArray()
   @IsString({ each: true })
   category: string[];
+
+  @ApiProperty({ example: 50 })
+  @IsNumber()
+  quantity: number;
 }
 
 export class CreateProductResponseDto {
@@ -79,6 +83,9 @@ export class CreateProductResponseDto {
 
   @ApiProperty()
   price: number;
+
+  @ApiProperty()
+  quantity: number;
 
   @ApiProperty()
   createdAt: Date;

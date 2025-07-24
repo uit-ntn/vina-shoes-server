@@ -68,6 +68,11 @@ export class UpdateProductRequestDto {
   @IsArray()
   @IsString({ each: true })
   category?: string[];
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  quantity?: number;
 }
 
 export class UpdateProductResponseDto {
@@ -94,5 +99,8 @@ export class UpdateProductResponseDto {
 
   @ApiProperty({ type: [String] })
   category: string[];
+
+  @ApiProperty()
+  quantity: number;
 }
 

@@ -45,39 +45,11 @@ export class ProductService {
     return { message: 'Product deleted successfully' };
   }
 
-  async findByCategory(categoryId: string, page: number, limit: number) {
-    const [products, total] = await Promise.all([
-      this.productModel.find({ categoryId })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .exec(),
-      this.productModel.countDocuments({ categoryId })
-    ]);
 
-    return {
-      products,
-      total,
-      page,
-      limit
-    };
-  }
 
-  async updateStock(id: string, inStock: boolean): Promise<Product> {
-    const product = await this.productModel
-      .findByIdAndUpdate(id, { inStock }, { new: true })
-      .exec();
-    if (!product) throw new NotFoundException('Product not found');
-    return product;
-  }
 
-  async getFeaturedProducts() {
-    // For now, we'll consider products with high ratings (>= 4.5) as featured
-    return this.productModel
-      .find({ rating: { $gte: 4.5 } })
-      .sort({ rating: -1 })
-      .limit(8)
-      .exec();
-  }
+
+
 
   async getNewArrivals() {
     return this.productModel

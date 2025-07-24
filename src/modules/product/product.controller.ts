@@ -76,22 +76,7 @@ export class ProductController {
     return this.productService.findOne(id);
   }
 
-  @Get('category/:categoryId')
-  @ApiOperation({ summary: 'Get products by category' })
-  @ApiParam({ name: 'categoryId', description: 'Category ID' })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiOkResponse({ 
-    description: 'Products in category',
-    type: ListProductResponseDto 
-  })
-  findByCategory(
-    @Param('categoryId') categoryId: string,
-    @Query() query: ListProductRequestDto
-  ) {
-    const { page = 1, limit = 10 } = query;
-    return this.productService.findByCategory(categoryId, page, limit);
-  }
+
 
   @Put(':id')
   @ApiOperation({ summary: 'Update product' })
@@ -105,30 +90,7 @@ export class ProductController {
     return this.productService.update(id, dto);
   }
 
-  @Put(':id/stock')
-  @ApiOperation({ summary: 'Update product stock status' })
-  @ApiParam({ name: 'id', description: 'Product ID' })
-  @ApiBody({ 
-    schema: {
-      properties: {
-        inStock: { 
-          type: 'boolean',
-          example: true,
-          description: 'Stock availability status'
-        }
-      }
-    }
-  })
-  @ApiOkResponse({ 
-    description: 'Stock status updated',
-    type: UpdateProductResponseDto 
-  })
-  updateStock(
-    @Param('id') id: string,
-    @Body('inStock') inStock: boolean
-  ) {
-    return this.productService.updateStock(id, inStock);
-  }
+
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete product' })
@@ -141,15 +103,7 @@ export class ProductController {
     return this.productService.remove(id);
   }
 
-  @Get('featured')
-  @ApiOperation({ summary: 'Get featured products' })
-  @ApiOkResponse({
-    description: 'Featured products returned successfully',
-    type: [GetProductResponseDto]
-  })
-  getFeaturedProducts() {
-    return this.productService.getFeaturedProducts();
-  }
+
 
   @Get('new-arrivals')
   @ApiOperation({ summary: 'Get new arrival products' })

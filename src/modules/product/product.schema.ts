@@ -53,6 +53,9 @@ export class Product extends Document {
 
   @Prop({ type: [String], default: [] })
   category: string[];
+
+  @Prop({ type: Number, default: 0, min: 0 })
+  quantity: number;
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);

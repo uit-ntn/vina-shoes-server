@@ -51,6 +51,9 @@ export class GetProductResponseDto {
   category: string[];
 
   @ApiProperty()
+  quantity: number;
+
+  @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
