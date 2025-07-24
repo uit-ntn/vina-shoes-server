@@ -6,15 +6,7 @@ import {
   UpdateUserRequestDto, 
   UpdateUserResponseDto 
 } from './dto/update-user.dto';
-import { UserStatsResponseDto } from './dto/user-stats.dto';
-import { 
-  UpdateUserStatusRequestDto, 
-  UpdateUserStatusResponseDto 
-} from './dto/update-user-status.dto';
-import {
-  UpdateUserRoleRequestDto,
-  UpdateUserRoleResponseDto
-} from './dto/update-user-role.dto';
+
 import {
   CreateUserRequestDto,
   CreateUserResponseDto
@@ -83,12 +75,7 @@ export class UserController {
     return this.userService.findAll(query);
   }
 
-  @ApiOperation({ summary: 'Get user statistics' })
-  @ApiResponse({ status: 200, type: UserStatsResponseDto })
-  @Get('stats')
-  getStats() {
-    return this.userService.getStats();
-  }
+
 
   @ApiOperation({ summary: 'Search users' })
   @ApiResponse({ status: 200, type: [UserBaseDto] })
@@ -146,27 +133,9 @@ export class UserController {
     return this.userService.remove(id);
   }
 
-  @ApiOperation({ summary: 'Update user status' })
-  @ApiParam({ name: 'id', description: 'User ID' })
-  @ApiBody({ type: UpdateUserStatusRequestDto })
-  @ApiOkResponse({ type: UpdateUserStatusResponseDto })
-  @Put(':id/status')
-  updateStatus(
-    @Param('id') id: string,
-    @Body() dto: UpdateUserStatusRequestDto
-  ) {
-    return this.userService.updateStatus(id, dto);
-  }
+
   
-  @ApiOperation({ summary: 'Update user role' })
-  @ApiResponse({ status: 200, type: UpdateUserRoleResponseDto })
-  @Put(':id/role')
-  updateRole(
-    @Param('id') id: string,
-    @Body() dto: UpdateUserRoleRequestDto
-  ) {
-    return this.userService.updateRole(id, dto);
-  }
+
 
   @ApiOperation({ summary: 'Update user by ID' })
   @ApiParam({ name: 'id', description: 'User ID' })
