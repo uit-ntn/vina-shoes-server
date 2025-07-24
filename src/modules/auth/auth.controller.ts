@@ -27,7 +27,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Register new user' })
   @ApiBody({ type: RegisterDto, description: 'User registration data' })
   @ApiCreatedResponse({ 
-    description: 'User has been successfully created and verification email sent',
+    description: 'User has been successfully created and verification email sent (verification optional for login)',
     schema: {
       type: 'object',
       properties: {
@@ -146,7 +146,6 @@ export class AuthController {
     }
   })
   @ApiNotFoundResponse({ description: 'User not found' })
-  @ApiBadRequestResponse({ description: 'Email not verified' })
   @Post('forgot-password')
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto.email);

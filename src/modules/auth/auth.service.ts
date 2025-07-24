@@ -86,10 +86,6 @@ export class AuthService {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
-    if (!user.emailVerified) {
-      throw new UnauthorizedException('Please verify your email address before logging in');
-    }
-
     return user;
   }
 
@@ -140,10 +136,6 @@ export class AuthService {
   async forgotPassword(email: string) {
     const user = await this.userService.findByEmail(email);
     if (!user) throw new NotFoundException('User not found');
-
-    if (!user.emailVerified) {
-      throw new BadRequestException('Please verify your email address first');
-    }
 
     // Generate reset token
     const token = uuidv4();
