@@ -67,4 +67,7 @@ class ProductDto {
 
   @ApiProperty()
   rating: number;
+
+  @ApiProperty()
+  quantity: number;
 }

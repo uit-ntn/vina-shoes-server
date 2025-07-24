@@ -34,4 +34,7 @@ export class ProductBaseDto {
 
   @ApiProperty({ type: [String] })
   category: string[];
+
+  @ApiProperty()
+  quantity: number;
 }
