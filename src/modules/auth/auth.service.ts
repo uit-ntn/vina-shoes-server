@@ -5,15 +5,34 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UserService } from "../user/user.service";
 import { v4 as uuidv4 } from 'uuid';
-import { RegisterDto } from './auth.dto';
 import { TokenResponseDto } from './dto/refresh-token.dto';
 import { User } from '../user/user.schema';
 import { MailService } from '../mail/mail.service';
 import { Types } from 'mongoose';
+import { 
+  SendOtpDto, 
+  VerifyOtpDto, 
+  RegisterWithOtpDto, 
+  ResetPasswordWithOtpDto,
+  OtpResponseDto 
+} from './dto/otp.dto';
+
+// Add DTOs for new flow
+interface RegisterDto {
+  email: string;
+  fullName: string;
+  password: string;
+}
+
+interface VerifyEmailDto {
+  email: string;
+  otp: string;
+}
 
 @Injectable()
 export class AuthService {
   private resetTokens = new Map<string, { token: string, expires: Date }>(); // email -> { token, expires }
+  private pendingRegistrations = new Map<string, { userData: RegisterWithOtpDto, expires: Date }>(); // email -> { userData, expires }
 
   constructor(
     private readonly userService: UserService,
@@ -21,39 +40,69 @@ export class AuthService {
     private readonly mailService: MailService
   ) {}
 
-  async register(dto: RegisterDto): Promise<User> {
+  async register(dto: RegisterDto): Promise<OtpResponseDto> {
     const existing = await this.userService.findByEmail(dto.email);
     if (existing) throw new BadRequestException('Email already in use');
 
     const hash = await bcrypt.hash(dto.password, 10);
-    const verificationToken = uuidv4();
-    const verificationExpiry = new Date();
-    verificationExpiry.setHours(verificationExpiry.getHours() + 24); // Token expires in 24 hours
+    const otp = this.generateOtp();
+    const expires = new Date();
+    expires.setMinutes(expires.getMinutes() + 10); // 10 minutes expiry
 
-    const user = await this.userService.create({
-      ...dto,
+    // Create user with all data but not verified
+    await this.userService.create({
+      name: dto.fullName,
+      email: dto.email,
       password: hash,
-      verificationToken: verificationToken,
-      verificationExpires: verificationExpiry,
+      otpCode: otp,
+      otpExpiry: expires,
+      otpType: 'registration'
     });
 
-    // Send verification email
-    await this.mailService.sendVerificationEmail(user.email, verificationToken);
+    // Send OTP email
+    await this.mailService.sendOtpEmail(dto.email, otp, 'registration');
 
-    return user;
+    return {
+      message: 'OTP sent to your email for registration',
+      email: dto.email,
+      expiresAt: expires
+    };
   }
 
-  async verifyEmail(token: string): Promise<void> {
-    const user = await this.userService.findByVerificationToken(token);
-    if (!user) {
-      throw new BadRequestException('Invalid verification token');
+  async verifyEmail(dto: VerifyEmailDto): Promise<any> {
+    const user = await this.userService.findByEmail(dto.email);
+    if (!user) throw new BadRequestException('User not found');
+
+    // Verify OTP
+    if (user.otpCode !== dto.otp || user.otpType !== 'registration') {
+      throw new BadRequestException('Invalid OTP');
     }
 
-    if (user.verificationExpires < new Date()) {
-      throw new BadRequestException('Verification token has expired');
+    if (user.otpExpiry < new Date()) {
+      throw new BadRequestException('OTP has expired');
     }
 
-    await this.userService.verifyEmail(user._id.toString());
+    // Update user to verified and clear OTP
+    const updatedUser = await this.userService.update(user._id.toString(), {
+      emailVerified: true,
+      otpCode: undefined,
+      otpExpiry: undefined,
+      otpType: undefined
+    });
+
+    if (!updatedUser) throw new BadRequestException('Failed to update user');
+
+    // Generate JWT token
+    const payload = { userId: updatedUser._id, email: updatedUser.email };
+    const token = this.jwtService.sign(payload);
+
+    return {
+      id: updatedUser._id.toString(),
+      fullName: updatedUser.name,
+      email: updatedUser.email,
+      token,
+      message: 'Registration completed successfully'
+    };
   }
 
   async resendVerificationEmail(email: string): Promise<void> {
@@ -205,5 +254,132 @@ export class AuthService {
   async logoutFromDevice(userId: string, refreshToken: string): Promise<void> {
     // Remove specific refresh token
     await this.userService.removeRefreshToken(userId, refreshToken);
+  }
+
+  // =============== OTP METHODS ===============
+
+  private generateOtp(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+
+  async sendRegistrationOtp(dto: SendOtpDto): Promise<OtpResponseDto> {
+    const existing = await this.userService.findByEmail(dto.email);
+    if (existing) throw new BadRequestException('Email already in use');
+
+    const otp = this.generateOtp();
+    const expires = new Date();
+    expires.setMinutes(expires.getMinutes() + 10); // 10 minutes expiry
+
+    // Update user with OTP info
+    const user = await this.userService.create({
+      name: 'temp',
+      email: dto.email,
+      password: 'temp',
+      otpCode: otp,
+      otpExpiry: expires,
+      otpType: 'registration'
+    });
+
+    // Send OTP email
+    await this.mailService.sendOtpEmail(dto.email, otp, 'registration');
+
+    return {
+      message: 'OTP sent to your email',
+      email: dto.email,
+      expiresAt: expires
+    };
+  }
+
+  async registerWithOtp(dto: RegisterWithOtpDto): Promise<User> {
+    const user = await this.userService.findByEmail(dto.email);
+    if (!user) throw new BadRequestException('Invalid email or OTP');
+
+    // Verify OTP
+    if (user.otpCode !== dto.otp || user.otpType !== 'registration') {
+      throw new BadRequestException('Invalid OTP');
+    }
+
+    if (user.otpExpiry < new Date()) {
+      throw new BadRequestException('OTP has expired');
+    }
+
+    // Hash password and update user
+    const hash = await bcrypt.hash(dto.password, 10);
+    const updatedUser = await this.userService.update(user._id.toString(), {
+      name: dto.name,
+      password: hash,
+      emailVerified: true,
+      otpCode: undefined,
+      otpExpiry: undefined,
+      otpType: undefined
+    });
+
+    if (!updatedUser) throw new BadRequestException('Failed to update user');
+    return updatedUser;
+  }
+
+  async sendPasswordResetOtp(dto: SendOtpDto): Promise<OtpResponseDto> {
+    const user = await this.userService.findByEmail(dto.email);
+    if (!user) throw new NotFoundException('User not found');
+
+    const otp = this.generateOtp();
+    const expires = new Date();
+    expires.setMinutes(expires.getMinutes() + 10); // 10 minutes expiry
+
+    // Update user with OTP info
+    await this.userService.update(user._id.toString(), {
+      otpCode: otp,
+      otpExpiry: expires,
+      otpType: 'password_reset'
+    });
+
+    // Send OTP email
+    await this.mailService.sendOtpEmail(dto.email, otp, 'password_reset');
+
+    return {
+      message: 'Password reset OTP sent to your email',
+      email: dto.email,
+      expiresAt: expires
+    };
+  }
+
+  async resetPasswordWithOtp(dto: ResetPasswordWithOtpDto): Promise<{ message: string }> {
+    const user = await this.userService.findByEmail(dto.email);
+    if (!user) throw new NotFoundException('User not found');
+
+    // Verify OTP
+    if (user.otpCode !== dto.otp || user.otpType !== 'password_reset') {
+      throw new BadRequestException('Invalid OTP');
+    }
+
+    if (user.otpExpiry < new Date()) {
+      throw new BadRequestException('OTP has expired');
+    }
+
+    // Hash new password and update
+    const hash = await bcrypt.hash(dto.newPassword, 10);
+    await this.userService.update(user._id.toString(), {
+      password: hash,
+      otpCode: undefined,
+      otpExpiry: undefined,
+      otpType: undefined
+    });
+
+    // Clear all refresh tokens for security
+    await this.userService.clearAllRefreshTokens(user._id.toString());
+
+    return { message: 'Password reset successfully' };
+  }
+
+  async verifyOtp(dto: VerifyOtpDto): Promise<{ message: string; valid: boolean }> {
+    const user = await this.userService.findByEmail(dto.email);
+    if (!user) throw new NotFoundException('User not found');
+
+    const isValid = user.otpCode === dto.otp && user.otpExpiry > new Date();
+
+    return {
+      message: isValid ? 'OTP is valid' : 'Invalid or expired OTP',
+      valid: isValid
+    };
   }
 }

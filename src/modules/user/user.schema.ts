@@ -46,6 +46,15 @@ export class User extends Document {
   @Prop({ type: Date, default: null })
   verificationExpires: Date;
 
+  @Prop({ type: String, default: null })
+  otpCode: string;
+
+  @Prop({ type: Date, default: null })
+  otpExpiry: Date;
+
+  @Prop({ type: String, default: null })
+  otpType: string; // 'registration' | 'password_reset'
+
   @Prop({ type: Date, default: () => new Date(0) })
   lastLoginAt: Date;
 

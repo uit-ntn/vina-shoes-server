@@ -14,47 +14,84 @@ import {
   getSchemaPath
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto } from './auth.dto';
-import { ForgotPasswordDto, ResetPasswordDto, ChangePasswordDto } from './dto/password.dto';
+import { LoginDto } from './auth.dto';
+import { ChangePasswordDto } from './dto/password.dto';
 import { RefreshTokenDto, TokenResponseDto } from './dto/refresh-token.dto';
-import { VerifyEmailDto, ResendVerificationDto } from './dto/verify-email.dto';
+import {
+  SendOtpDto,
+  RegisterWithOtpDto,
+  VerifyOtpDto,
+  ResetPasswordWithOtpDto,
+  OtpResponseDto
+} from './dto/otp.dto';
+
+// Add these DTOs for the new flow
+export class RegisterDto {
+  email: string;
+  fullName: string;
+  password: string;
+}
+
+export class VerifyEmailDto {
+  email: string;
+  otp: string;
+}
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @ApiOperation({ summary: 'Register new user' })
-  @ApiBody({ type: RegisterDto, description: 'User registration data' })
-  @ApiCreatedResponse({ 
-    description: 'User has been successfully created and verification email sent (verification optional for login)',
+  @ApiOperation({ summary: 'Register with email, password, fullName and send OTP' })
+  @ApiBody({ 
     schema: {
       type: 'object',
       properties: {
-        id: { type: 'string', example: '60d21b4667d0d8992e610c85' },
-        name: { type: 'string', example: 'John Doe' },
-        email: { type: 'string', example: 'john@example.com' },
-        role: { type: 'string', example: 'user' }
-      }
+        email: { type: 'string', example: 'user@example.com' },
+        fullName: { type: 'string', example: 'John Doe' },
+        password: { type: 'string', example: 'password123' }
+      },
+      required: ['email', 'fullName', 'password']
     }
   })
+  @ApiCreatedResponse({ 
+    description: 'OTP sent successfully',
+    type: OtpResponseDto
+  })
+  @ApiBadRequestResponse({ description: 'Email already exists' })
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
-  @ApiOperation({ summary: 'Verify email address' })
-  @Get('verify-email')
-  async verifyEmail(@Query() dto: VerifyEmailDto) {
-    await this.authService.verifyEmail(dto.token);
-    return { message: 'Email verified successfully' };
-  }
-
-  @ApiOperation({ summary: 'Resend verification email' })
-  @Post('resend-verification')
-  async resendVerification(@Body() dto: ResendVerificationDto) {
-    await this.authService.resendVerificationEmail(dto.email);
-    return { message: 'Verification email sent successfully' };
+  @ApiOperation({ summary: 'Verify email with OTP to complete registration' })
+  @ApiBody({ 
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string', example: 'user@example.com' },
+        otp: { type: 'string', example: '123456' }
+      },
+      required: ['email', 'otp']
+    }
+  })
+  @ApiOkResponse({ 
+    description: 'Registration completed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        fullName: { type: 'string' },
+        email: { type: 'string' },
+        token: { type: 'string' },
+        message: { type: 'string', example: 'Registration completed successfully' }
+      }
+    }
+  })
+  @ApiBadRequestResponse({ description: 'Invalid OTP or OTP expired' })
+  @Post('verify-email')
+  async verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.authService.verifyEmail(dto);
   }
 
   @ApiOperation({ summary: 'Login user' })
@@ -132,27 +169,20 @@ export class AuthController {
     return { message: 'Logged out successfully from device' };
   }
 
-  @ApiOperation({ summary: 'Request password reset email' })
-  @ApiBody({ type: ForgotPasswordDto })
+  @ApiOperation({ summary: 'Send OTP for password reset' })
+  @ApiBody({ type: SendOtpDto })
   @ApiOkResponse({ 
-    description: 'Reset instructions sent to email',
-    schema: {
-      properties: {
-        message: { 
-          type: 'string', 
-          example: 'Password reset instructions sent to your email' 
-        }
-      }
-    }
+    description: 'Password reset OTP sent successfully',
+    type: OtpResponseDto
   })
   @ApiNotFoundResponse({ description: 'User not found' })
   @Post('forgot-password')
-  async forgotPassword(@Body() dto: ForgotPasswordDto) {
-    return this.authService.forgotPassword(dto.email);
+  async forgotPassword(@Body() dto: SendOtpDto) {
+    return this.authService.sendPasswordResetOtp(dto);
   }
 
-  @ApiOperation({ summary: 'Reset password using token' })
-  @ApiBody({ type: ResetPasswordDto })
+  @ApiOperation({ summary: 'Reset password with OTP' })
+  @ApiBody({ type: ResetPasswordWithOtpDto })
   @ApiOkResponse({ 
     description: 'Password reset successful',
     schema: {
@@ -164,11 +194,11 @@ export class AuthController {
       }
     }
   })
-  @ApiBadRequestResponse({ description: 'Invalid or expired token' })
+  @ApiBadRequestResponse({ description: 'Invalid OTP or OTP expired' })
   @ApiNotFoundResponse({ description: 'User not found' })
   @Post('reset-password')
-  async resetPassword(@Body() dto: ResetPasswordDto) {
-    return this.authService.resetPassword(dto.email, dto.token, dto.newPassword);
+  async resetPassword(@Body() dto: ResetPasswordWithOtpDto) {
+    return this.authService.resetPasswordWithOtp(dto);
   }
 
   @ApiOperation({ summary: 'Change password (requires authentication)' })
@@ -197,5 +227,24 @@ export class AuthController {
       dto.currentPassword, 
       dto.newPassword
     );
+  }
+
+  // =============== UTILITY ENDPOINT ===============
+
+  @ApiOperation({ summary: 'Verify OTP code (optional utility)' })
+  @ApiBody({ type: VerifyOtpDto })
+  @ApiOkResponse({ 
+    description: 'OTP verification result',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+        valid: { type: 'boolean' }
+      }
+    }
+  })
+  @Post('verify-otp')
+  async verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.authService.verifyOtp(dto);
   }
 }
