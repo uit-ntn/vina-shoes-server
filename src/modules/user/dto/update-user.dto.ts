@@ -57,6 +57,30 @@ export class UpdateUserRequestDto {
   @IsOptional()
   @IsArray()
   addresses?: UserAddressDto[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  password?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  otpCode?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  otpExpiry?: Date;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  otpType?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  emailVerified?: boolean;
 }
 
 export class UpdateUserResponseDto {

@@ -56,13 +56,12 @@ export class ProductController {
 
   @Get()
   @ApiOperation({ summary: 'Get all products' })
-  @ApiQuery({ name: 'search', required: false, description: 'Search term', type: String })
   @ApiOkResponse({
-    description: 'List of products returned',
+    description: 'List of all products',
     type: [GetProductResponseDto]
   })
-  findAll(@Query('search') search?: string) {
-    return this.productService.findAll(search);
+  findAll() {
+    return this.productService.findAll();
   }
 
   @Get(':id')
@@ -104,6 +103,22 @@ export class ProductController {
   }
 
 
+
+  @Get('categories')
+  @ApiOperation({ summary: 'Get all product categories' })
+  @ApiOkResponse({
+    description: 'List of all unique product categories',
+    schema: {
+      type: 'array',
+      items: {
+        type: 'string'
+      },
+      example: ['sneakers', 'running', 'basketball', 'lifestyle']
+    }
+  })
+  getAllCategories() {
+    return this.productService.getAllCategories();
+  }
 
   @Get('new-arrivals')
   @ApiOperation({ summary: 'Get new arrival products' })

@@ -58,11 +58,6 @@ export class CreateProductRequestDto {
   @IsString({ each: true })
   tags?: string[];
 
-  @ApiProperty({ type: [String], example: ['training'] })
-  @IsArray()
-  @IsString({ each: true })
-  category: string[];
-
   @ApiProperty({ example: 50 })
   @IsNumber()
   quantity: number;

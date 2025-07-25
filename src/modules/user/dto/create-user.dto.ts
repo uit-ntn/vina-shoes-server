@@ -51,6 +51,20 @@ export class CreateUserRequestDto {
   @ApiPropertyOptional({ type: [UserAddressDto] })
   @IsOptional()
   addresses?: UserAddressDto[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  otpCode?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  otpExpiry?: Date;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  otpType?: string;
 }
 
 export class CreateUserResponseDto {
