@@ -3,12 +3,16 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import * as morgan from 'morgan';
 
 // Add type declaration for HMR
 declare const module: NodeModule & { hot?: { accept: () => void; dispose: (cb: () => void) => void } };
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  
+  // Add morgan logging middleware
+  app.use(morgan(':method :url :status :response-time ms - :res[content-length] bytes'));
   
   // Global pipes
   app.useGlobalPipes(new ValidationPipe({
