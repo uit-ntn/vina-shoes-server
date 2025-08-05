@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards, Request, Get, Query } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { 
   ApiTags, 
@@ -10,32 +10,20 @@ import {
   ApiOkResponse,
   ApiUnauthorizedResponse,
   ApiBadRequestResponse,
-  ApiNotFoundResponse,
-  getSchemaPath
+  ApiNotFoundResponse
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { LoginDto } from './auth.dto';
+import { LoginRequestDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ChangePasswordDto } from './dto/password.dto';
 import { RefreshTokenDto, TokenResponseDto } from './dto/refresh-token.dto';
 import {
   SendOtpDto,
-  RegisterWithOtpDto,
   VerifyOtpDto,
   ResetPasswordWithOtpDto,
   OtpResponseDto
 } from './dto/otp.dto';
-
-// Add these DTOs for the new flow
-export class RegisterDto {
-  email: string;
-  fullName: string;
-  password: string;
-}
-
-export class VerifyEmailDto {
-  email: string;
-  otp: string;
-}
 
 @ApiTags('auth')
 @Controller('auth')
@@ -43,17 +31,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @ApiOperation({ summary: 'Register with email, password, fullName and send OTP' })
-  @ApiBody({ 
-    schema: {
-      type: 'object',
-      properties: {
-        email: { type: 'string', example: 'user@example.com' },
-        fullName: { type: 'string', example: 'John Doe' },
-        password: { type: 'string', example: 'password123' }
-      },
-      required: ['email', 'fullName', 'password']
-    }
-  })
+  @ApiBody({ type: RegisterDto })
   @ApiCreatedResponse({ 
     description: 'OTP sent successfully',
     type: OtpResponseDto
@@ -65,16 +43,7 @@ export class AuthController {
   }
 
   @ApiOperation({ summary: 'Verify email with OTP to complete registration' })
-  @ApiBody({ 
-    schema: {
-      type: 'object',
-      properties: {
-        email: { type: 'string', example: 'user@example.com' },
-        otp: { type: 'string', example: '123456' }
-      },
-      required: ['email', 'otp']
-    }
-  })
+  @ApiBody({ type: VerifyEmailDto })
   @ApiOkResponse({ 
     description: 'Registration completed successfully',
     schema: {
@@ -95,16 +64,13 @@ export class AuthController {
   }
 
   @ApiOperation({ summary: 'Login user' })
-  @ApiBody({ 
-    type: LoginDto,
-    description: 'User credentials'
-  })
+  @ApiBody({ type: LoginRequestDto })
   @ApiOkResponse({ 
     description: 'User successfully authenticated',
     type: TokenResponseDto
   })
   @Post('login')
-  async login(@Body() dto: LoginDto) {
+  async login(@Body() dto: LoginRequestDto) {
     const user = await this.authService.validateUser(dto.email, dto.password);
     return this.authService.login(user);
   }
@@ -228,8 +194,6 @@ export class AuthController {
       dto.newPassword
     );
   }
-
-  // =============== UTILITY ENDPOINT ===============
 
   @ApiOperation({ summary: 'Verify OTP code (optional utility)' })
   @ApiBody({ type: VerifyOtpDto })

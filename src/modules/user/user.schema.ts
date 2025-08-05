@@ -12,6 +12,18 @@ export enum UserRole {
   USER = 'user'
 }
 
+export interface UserAddress {
+  street: string;
+  city: string;
+  country: string;
+  postalCode: string;
+  state?: string;
+  isDefault?: boolean;
+  label?: string;
+  phone?: string;
+  recipientName?: string;
+}
+
 @Schema({ timestamps: true })
 export class User extends Document {
   declare _id: Types.ObjectId;
@@ -79,8 +91,21 @@ export class User extends Document {
     newsletter: boolean;
   };
 
-  @Prop({ type: [Object], default: [] })
-  addresses: any[];
+  @Prop({ 
+    type: [{
+      street: { type: String, required: true },
+      city: { type: String, required: true },
+      country: { type: String, required: true },
+      postalCode: { type: String, required: true },
+      state: { type: String, required: false },
+      isDefault: { type: Boolean, default: false },
+      label: { type: String, required: false },
+      phone: { type: String, required: false },
+      recipientName: { type: String, required: false }
+    }], 
+    default: [] 
+  })
+  addresses: UserAddress[];
 
   @Prop({ type: Date, default: null })
   deletedAt: Date;
