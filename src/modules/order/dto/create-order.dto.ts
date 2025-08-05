@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsNotEmpty, ValidateNested, IsArray, Min } from 'class-validator';
+import { IsString, IsNumber, IsNotEmpty, ValidateNested, IsArray, Min, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class OrderItemDto {
@@ -52,13 +52,10 @@ export class ShippingAddressDto {
 }
 
 export class CreateOrderRequestDto {
-  @ApiProperty({ type: [OrderItemDto] })
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => OrderItemDto)
-  items: OrderItemDto[];
-
-  @ApiProperty()
+  @ApiProperty({ 
+    description: 'Payment method',
+    example: 'COD'
+  })
   @IsString()
   @IsNotEmpty()
   paymentMethod: string;
@@ -67,6 +64,44 @@ export class CreateOrderRequestDto {
   @ValidateNested()
   @Type(() => ShippingAddressDto)
   shippingAddress: ShippingAddressDto;
+
+  @ApiProperty({ 
+    description: 'Shipping fee',
+    required: false,
+    default: 0
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  shippingFee?: number;
+
+  @ApiProperty({ 
+    description: 'Tax amount',
+    required: false,
+    default: 0
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  tax?: number;
+
+  @ApiProperty({ 
+    description: 'Discount amount',
+    required: false,
+    default: 0
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  discount?: number;
+
+  @ApiProperty({ 
+    description: 'Order notes',
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  notes?: string;
 }
 
 export class CreateOrderResponseDto {
@@ -74,10 +109,16 @@ export class CreateOrderResponseDto {
   id: string;
 
   @ApiProperty()
+  orderNumber: string;
+
+  @ApiProperty()
   status: string;
 
   @ApiProperty()
   totalAmount: number;
+
+  @ApiProperty()
+  finalAmount: number;
 
   @ApiProperty()
   message: string;

@@ -11,11 +11,12 @@ import { MailModule } from '../mail/mail.module';
 @Module({
   imports: [
     PassportModule,
+    // JWT configuration with async factory to access environment variables
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
         secret: configService.getOrThrow('JWT_SECRET'),
-        signOptions: { expiresIn: '30m' }, // Set access token expiration to 30 minutes
+        signOptions: { expiresIn: '30m' }, // Access token expires in 30 minutes
       }),
       inject: [ConfigService],
     }),
@@ -24,6 +25,6 @@ import { MailModule } from '../mail/mail.module';
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
-  exports: [AuthService]
+  exports: [AuthService], // Export AuthService for use in other modules
 })
 export class AuthModule {}

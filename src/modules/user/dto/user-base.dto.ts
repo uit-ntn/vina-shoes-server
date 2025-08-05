@@ -20,23 +20,23 @@ export class UserPreferencesDto {
 }
 
 export class UserAddressDto {
-  @ApiProperty({ example: '123 Nguyen Hue Street' })
+  @ApiProperty({ example: 'Street 0' })
   street: string;
 
-  @ApiProperty({ example: 'Ho Chi Minh City' })
+  @ApiProperty({ example: 'Da Nang' })
   city: string;
 
-  @ApiProperty({ example: 'Ho Chi Minh' })
-  state: string;
-
-  @ApiProperty({ example: 'Vietnam' })
+  @ApiProperty({ example: 'VN', description: 'Country code (e.g., VN, US, etc.)' })
   country: string;
 
-  @ApiProperty({ example: '70000' })
-  zipCode: string;
+  @ApiProperty({ example: '700000' })
+  postalCode: string;
 
-  @ApiProperty({ example: true, description: 'Whether this is the default address' })
-  isDefault: boolean;
+  @ApiPropertyOptional({ example: 'Ho Chi Minh', description: 'State/Province (optional)' })
+  state?: string;
+
+  @ApiPropertyOptional({ example: true, description: 'Whether this is the default address' })
+  isDefault?: boolean;
 
   @ApiPropertyOptional({ example: 'Home' })
   label?: string;

@@ -6,9 +6,10 @@ import * as bcrypt from 'bcrypt';
 import { UserService } from "../user/user.service";
 import { v4 as uuidv4 } from 'uuid';
 import { TokenResponseDto } from './dto/refresh-token.dto';
-import { User } from '../user/user.schema';
+import { RegisterDto } from './dto/register.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { User, UserStatus } from '../user/user.schema';
 import { MailService } from '../mail/mail.service';
-import { Types } from 'mongoose';
 import { 
   SendOtpDto, 
   VerifyOtpDto, 
@@ -16,18 +17,6 @@ import {
   ResetPasswordWithOtpDto,
   OtpResponseDto 
 } from './dto/otp.dto';
-
-// Add DTOs for new flow
-interface RegisterDto {
-  email: string;
-  fullName: string;
-  password: string;
-}
-
-interface VerifyEmailDto {
-  email: string;
-  otp: string;
-}
 
 @Injectable()
 export class AuthService {
@@ -73,12 +62,12 @@ export class AuthService {
     const user = await this.userService.findByEmail(dto.email);
     if (!user) throw new BadRequestException('User not found');
 
-    // Verify OTP
-    if (user.otpCode !== dto.otp || user.otpType !== 'registration') {
+    // Verify OTP - handle cases where OTP fields might not exist
+    if (!user.otpCode || user.otpCode !== dto.otp || user.otpType !== 'registration') {
       throw new BadRequestException('Invalid OTP');
     }
 
-    if (user.otpExpiry < new Date()) {
+    if (!user.otpExpiry || user.otpExpiry < new Date()) {
       throw new BadRequestException('OTP has expired');
     }
 
@@ -131,6 +120,16 @@ export class AuthService {
   async validateUser(email: string, password: string): Promise<User> {
     const user = await this.userService.findByEmail(email);
     if (!user) throw new UnauthorizedException('Invalid credentials');
+    
+    // Check if user account is active
+    if (user.status !== UserStatus.ACTIVE) {
+      throw new UnauthorizedException('Account is not active');
+    }
+
+    // Check if email is verified (optional - comment out if you want to allow unverified logins)
+    if (!user.emailVerified) {
+      throw new UnauthorizedException('Please verify your email before logging in');
+    }
     
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
@@ -294,12 +293,12 @@ export class AuthService {
     const user = await this.userService.findByEmail(dto.email);
     if (!user) throw new BadRequestException('Invalid email or OTP');
 
-    // Verify OTP
-    if (user.otpCode !== dto.otp || user.otpType !== 'registration') {
+    // Verify OTP - handle cases where OTP fields might not exist
+    if (!user.otpCode || user.otpCode !== dto.otp || user.otpType !== 'registration') {
       throw new BadRequestException('Invalid OTP');
     }
 
-    if (user.otpExpiry < new Date()) {
+    if (!user.otpExpiry || user.otpExpiry < new Date()) {
       throw new BadRequestException('OTP has expired');
     }
 
@@ -347,12 +346,12 @@ export class AuthService {
     const user = await this.userService.findByEmail(dto.email);
     if (!user) throw new NotFoundException('User not found');
 
-    // Verify OTP
-    if (user.otpCode !== dto.otp || user.otpType !== 'password_reset') {
+    // Verify OTP - handle cases where OTP fields might not exist
+    if (!user.otpCode || user.otpCode !== dto.otp || user.otpType !== 'password_reset') {
       throw new BadRequestException('Invalid OTP');
     }
 
-    if (user.otpExpiry < new Date()) {
+    if (!user.otpExpiry || user.otpExpiry < new Date()) {
       throw new BadRequestException('OTP has expired');
     }
 
@@ -375,7 +374,9 @@ export class AuthService {
     const user = await this.userService.findByEmail(dto.email);
     if (!user) throw new NotFoundException('User not found');
 
-    const isValid = user.otpCode === dto.otp && user.otpExpiry > new Date();
+    // Handle cases where OTP fields might not exist
+    const isValid = Boolean(user.otpCode && user.otpExpiry && 
+                           user.otpCode === dto.otp && user.otpExpiry > new Date());
 
     return {
       message: isValid ? 'OTP is valid' : 'Invalid or expired OTP',
