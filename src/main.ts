@@ -4,12 +4,25 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import * as morgan from 'morgan';
+import * as express from 'express';
 
 // Add type declaration for HMR
 declare const module: NodeModule & { hot?: { accept: () => void; dispose: (cb: () => void) => void } };
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    // Allow access to rawBody for Stripe webhook verification
+    rawBody: true
+  } as any);
+  
+  // Expose raw body on request (for Stripe webhook)
+  app.use((req: any, res: any, next: any) => {
+    // Nest with rawBody option attaches rawBody automatically; ensure it exists
+    if (req.rawBody) return next();
+    let data = '';
+    req.on('data', (chunk: any) => { data += chunk; });
+    req.on('end', () => { req.rawBody = data; next(); });
+  });
   
   // Add morgan logging middleware
   app.use(morgan(':method :url :status :response-time ms - :res[content-length] bytes'));

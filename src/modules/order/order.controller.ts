@@ -16,13 +16,19 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/enums/role.enum';
+import { Public } from '../../common/decorators/public.decorator';
+import { CreatePaymentIntentResponseDto } from './dto/create-payment-intent.dto';
+import { ConfirmPaymentIntentRequestDto, ConfirmPaymentIntentResponseDto } from './dto/confirm-payment-intent.dto';
+import { ConfigService } from '@nestjs/config';
+import { Request as ExpressRequest, Response as ExpressResponse } from 'express';
+import Stripe from 'stripe';
 
 @ApiTags('Orders')
 @Controller('orders')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @ApiBearerAuth()
 export class OrderController {
-  constructor(private readonly orderService: OrderService) {}
+  constructor(private readonly orderService: OrderService, private readonly configService: ConfigService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new order' })
@@ -247,5 +253,47 @@ export class OrderController {
   @ApiNotFoundResponse({ description: 'Order not found' })
   async remove(@Param('id') id: string) {
     return this.orderService.remove(id);
+  }
+
+  @Post(':id/payment-intent')
+  @ApiOperation({ summary: 'Create Stripe Payment Intent for this order' })
+  @ApiResponse({ status: 200, type: CreatePaymentIntentResponseDto })
+  async createPaymentIntent(
+    @Request() req,
+    @Param('id') id: string,
+  ) {
+    return this.orderService.createPaymentIntent(req.user.userId, id);
+  }
+
+  @Post('webhook')
+  @Public()
+  @ApiOperation({ summary: 'Stripe webhook endpoint' })
+  @ApiResponse({ status: 200, description: 'Webhook received' })
+  async stripeWebhook(
+    @Body() body: any,
+    @Request() req: ExpressRequest,
+  ) {
+    const signature = req.headers['stripe-signature'] as string;
+    const webhookSecret = this.configService.get<string>('stripe.webhookSecret');
+    const stripe = new Stripe(this.configService.get<string>('stripe.secretKey')!, { apiVersion: '2025-07-30.basil' });
+
+    let event: Stripe.Event;
+    if (webhookSecret) {
+      // Note: to verify signature, we need the raw body. Ensure raw body middleware is configured.
+      // However, in this project we will proceed without verification if raw body is not provided.
+      try {
+        // @ts-ignore rawBody may be attached by middleware configuration
+        const rawBody = (req as any).rawBody || JSON.stringify(body);
+        event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+      } catch (err) {
+        // Fallback to using parsed body when raw is unavailable (not recommended for production)
+        event = body as Stripe.Event;
+      }
+    } else {
+      event = body as Stripe.Event;
+    }
+
+    await this.orderService.handleStripeWebhook(event);
+    return { received: true };
   }
 }

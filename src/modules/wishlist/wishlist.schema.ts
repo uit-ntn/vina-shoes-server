@@ -29,5 +29,5 @@ export class Wishlist extends Document {
 export const WishlistSchema = SchemaFactory.createForClass(Wishlist);
 
 // Tạo index để optimize queries
-WishlistSchema.index({ userId: 1 });
+// Removed redundant index on userId to avoid duplicate index with unique: true
 WishlistSchema.index({ 'products.productId': 1 }); 
